@@ -1,11 +1,19 @@
 """Clinical decision support tools using Mistral Small for fast inference."""
 import json
+import logging
+import time
+import traceback
 from mistralai import Mistral
 from config import MISTRAL_API_KEY
 from icd10 import check_red_flags, COMMON_SYMPTOMS
 
+# Get logger
+logger = logging.getLogger("daktari")
+
 # Initialize Mistral client for clinical tools (uses Small model for speed/cost)
+logger.info("Initializing Mistral client for clinical tools...")
 client = Mistral(api_key=MISTRAL_API_KEY)
+logger.info("✓ Clinical tools Mistral client ready")
 
 # Prompt for differential diagnosis suggestion
 DIFFERENTIAL_PROMPT = """You are a clinical decision support system. Given the following symptom profile, suggest 3-5 possible differential diagnoses ranked by likelihood.
@@ -126,6 +134,11 @@ async def suggest_differentials(
     This is a CLINICAL DECISION SUPPORT tool - outputs are for clinicians only,
     NOT for patient-facing communication.
     """
+    logger.info("🧠 SUGGEST_DIFFERENTIALS called")
+    logger.info(f"   Symptoms: {symptoms}")
+    logger.info(f"   Duration: {duration}, Severity: {severity}")
+    logger.info(f"   Patient: {age_sex}, History: {medical_history}")
+
     # Build the symptom profile
     profile_parts = [f"Symptoms: {', '.join(symptoms)}"]
 
@@ -141,8 +154,11 @@ async def suggest_differentials(
         profile_parts.append(f"Triggers/Exacerbating factors: {triggers}")
 
     profile = "\n".join(profile_parts)
+    logger.debug(f"   Profile:\n{profile}")
 
     try:
+        logger.info("   Calling Mistral Small for differentials...")
+        start_time = time.time()
         response = client.chat.complete(
             model="mistral-small-latest",
             messages=[
@@ -150,13 +166,24 @@ async def suggest_differentials(
             ],
             response_format={"type": "json_object"}
         )
+        elapsed = time.time() - start_time
+        logger.info(f"   ✅ Mistral Small responded in {elapsed:.2f}s")
 
         result = json.loads(response.choices[0].message.content)
         result["source"] = "Daktari Clinical Decision Support (AI-assisted)"
         result["disclaimer"] = "AI-generated suggestions require clinical validation"
+
+        # Log the differentials found
+        if result.get("differentials"):
+            logger.info(f"   📋 Found {len(result['differentials'])} differentials:")
+            for d in result["differentials"][:3]:
+                logger.info(f"      - {d.get('condition', 'N/A')} ({d.get('confidence', 'N/A')})")
+
         return result
 
     except Exception as e:
+        logger.error(f"   ❌ SUGGEST_DIFFERENTIALS failed: {str(e)}")
+        logger.error(traceback.format_exc())
         return {
             "error": str(e),
             "differentials": [],
@@ -175,8 +202,17 @@ async def assess_urgency(
 
     Uses LLM-based clinical reasoning, with keyword-based red flag detection as backup.
     """
+    logger.info("🚨 ASSESS_URGENCY called (SATS)")
+    logger.info(f"   Symptoms: {symptoms}")
+    logger.info(f"   Severity Score: {severity_score}/10")
+    logger.info(f"   Duration: {duration}")
+
     # First, run keyword-based red flag check as safety net
     keyword_flags = check_red_flags(symptoms)
+    if keyword_flags.get("red_flags"):
+        logger.warning(f"   ⚠️ Keyword red flags detected: {keyword_flags['red_flags']}")
+    if keyword_flags.get("is_emergency"):
+        logger.warning(f"   🔴 KEYWORD EMERGENCY FLAG SET")
 
     # Build presentation for LLM
     presentation_parts = [
@@ -194,8 +230,11 @@ async def assess_urgency(
         presentation_parts.append(f"Keyword-detected concerns: {', '.join(keyword_flags['red_flags'])}")
 
     presentation = "\n".join(presentation_parts)
+    logger.debug(f"   Presentation:\n{presentation}")
 
     try:
+        logger.info("   Calling Mistral Small for SATS assessment...")
+        start_time = time.time()
         response = client.chat.complete(
             model="mistral-small-latest",
             messages=[
@@ -203,11 +242,15 @@ async def assess_urgency(
             ],
             response_format={"type": "json_object"}
         )
+        elapsed = time.time() - start_time
+        logger.info(f"   ✅ Mistral Small responded in {elapsed:.2f}s")
 
         llm_result = json.loads(response.choices[0].message.content)
+        logger.info(f"   🏥 LLM Triage: {llm_result.get('color', 'N/A').upper()} - {llm_result.get('label', 'N/A')}")
 
         # Safety net: If keyword matcher found emergency but LLM didn't, escalate
         if keyword_flags.get("is_emergency") and llm_result.get("color") not in ["red", "orange"]:
+            logger.warning(f"   ⬆️ ESCALATING from {llm_result.get('color')} to ORANGE (keyword safety)")
             llm_result["color"] = "orange"
             llm_result["emoji"] = "🟠"
             llm_result["label"] = "VERY URGENT"
@@ -218,11 +261,15 @@ async def assess_urgency(
         llm_result["source"] = "South African Triage Scale (SATS) - AI-assisted"
         llm_result["keyword_backup_flags"] = keyword_flags.get("red_flags", [])
 
+        logger.info(f"   ✅ Final Triage: {llm_result.get('emoji', '')} {llm_result.get('color', '').upper()}")
         return llm_result
 
     except Exception as e:
+        logger.error(f"   ❌ ASSESS_URGENCY failed: {str(e)}")
+        logger.error(traceback.format_exc())
         # Fallback to keyword-based assessment
         fallback_color = "red" if keyword_flags.get("is_emergency") else "green"
+        logger.warning(f"   ⚠️ Using keyword fallback: {fallback_color.upper()}")
         return {
             "color": fallback_color,
             "emoji": "🔴" if fallback_color == "red" else "🟢",
