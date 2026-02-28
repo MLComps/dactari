@@ -1,0 +1,22 @@
+# Daktari Backend Dependencies
+
+# Web framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+websockets>=12.0
+
+# Mistral AI SDK
+mistralai>=1.0.0
+
+# HTTP client for API calls
+httpx>=0.26.0
+
+# PDF generation
+reportlab>=4.0.0
+
+# Data validation
+pydantic>=2.5.0
+
+# Environment variables (optional)
+python-dotenv>=1.0.0
