@@ -1,21 +1,71 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 
+/* ============================================
+   DAKTARI DESIGN SYSTEM
+   Clinical Warmth - Refined Medical Dark
+   ============================================ */
+
 :root {
-  --bg-base: #0C0C0C;
-  --bg-surface: #161618;
-  --bg-elevated: #1E1E21;
-  --bg-hover: #252529;
-  --border: rgba(255,255,255,0.08);
-  --border-strong: rgba(255,255,255,0.12);
-  --text-primary: #FFFFFF;
-  --text-secondary: #A0A0A0;
-  --text-muted: #666666;
-  --accent: #10B981;
-  --accent-light: #34D399;
-  --user-msg: #2563EB;
-  --error: #EF4444;
+  /* Core palette - Deep, restful darks */
+  --daktari-void: #08090a;
+  --daktari-deep: #0d0f11;
+  --daktari-base: #12151a;
+  --daktari-surface: #1a1d24;
+  --daktari-elevated: #232830;
+  --daktari-hover: #2d323c;
+
+  /* Borders - Subtle definition */
+  --daktari-border: rgba(255, 255, 255, 0.06);
+  --daktari-border-strong: rgba(255, 255, 255, 0.12);
+  --daktari-border-focus: rgba(45, 212, 191, 0.5);
+
+  /* Text hierarchy */
+  --daktari-text: #f4f4f5;
+  --daktari-text-secondary: #a1a1aa;
+  --daktari-text-muted: #52525b;
+  --daktari-text-disabled: #3f3f46;
+
+  /* Primary accent - Healing teal */
+  --daktari-primary: #2dd4bf;
+  --daktari-primary-dim: #14b8a6;
+  --daktari-primary-glow: rgba(45, 212, 191, 0.15);
+  --daktari-primary-intense: rgba(45, 212, 191, 0.25);
+
+  /* SATS Triage colors - Medical standard */
+  --triage-red: #ef4444;
+  --triage-red-bg: rgba(239, 68, 68, 0.15);
+  --triage-orange: #f97316;
+  --triage-orange-bg: rgba(249, 115, 22, 0.15);
+  --triage-yellow: #eab308;
+  --triage-yellow-bg: rgba(234, 179, 8, 0.15);
+  --triage-green: #22c55e;
+  --triage-green-bg: rgba(34, 197, 94, 0.15);
+
+  /* Semantic colors */
+  --daktari-error: #f87171;
+  --daktari-error-bg: rgba(248, 113, 113, 0.1);
+  --daktari-success: #4ade80;
+  --daktari-info: #60a5fa;
+
+  /* User message accent */
+  --daktari-user: #3b82f6;
+  --daktari-user-dim: #2563eb;
+
+  /* Shadows & Effects */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px var(--daktari-primary-glow);
+
+  /* Timing */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
 
 *, *::before, *::after {
   margin: 0;
@@ -23,52 +73,495 @@
   box-sizing: border-box;
 }
 
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 html, body, #root {
   height: 100%;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg-base);
-  color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--daktari-base);
+  color: var(--daktari-text);
+  line-height: 1.6;
 }
 
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--bg-elevated); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--bg-hover); }
+/* ============================================
+   TYPOGRAPHY UTILITIES
+   ============================================ */
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.font-display {
+  font-family: 'Outfit', system-ui, sans-serif;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+.text-balance {
+  text-wrap: balance;
 }
 
-@keyframes recording {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+/* ============================================
+   SCROLLBAR - Refined & Minimal
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-@keyframes dotPulse {
-  0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-  40% { transform: scale(1); opacity: 1; }
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.animate-in {
-  animation: fadeIn 0.4s ease-out forwards;
+::-webkit-scrollbar-thumb {
+  background: var(--daktari-elevated);
+  border-radius: 3px;
 }
 
-.recording-pulse {
-  animation: recording 1.5s ease-in-out infinite;
+::-webkit-scrollbar-thumb:hover {
+  background: var(--daktari-hover);
 }
 
-.typing-dot {
-  animation: dotPulse 1.4s ease-in-out infinite;
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--daktari-elevated) transparent;
 }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ============================================
+   ANIMATIONS - The Heartbeat System
+   ============================================ */
+
+/* Gentle fade up for messages */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* The signature heartbeat pulse */
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  14% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  28% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  42% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
+
+/* Soft breathing for recording */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+  }
+}
+
+/* Triage pulse for urgent banners */
+@keyframes triagePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Waveform bar animation */
+@keyframes waveform {
+  0%, 100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Thinking dots */
+@keyframes thinkingDot {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Slide in from top */
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Shimmer for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Modal backdrop */
+@keyframes backdropFade {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+/* Modal content */
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ============================================
+   ANIMATION UTILITIES
+   ============================================ */
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s var(--ease-out-expo) forwards;
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.animate-breathe {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+.animate-triage-pulse {
+  animation: triagePulse 1.5s ease-in-out infinite;
+}
+
+.animate-thinking-dot {
+  animation: thinkingDot 1.4s ease-in-out infinite;
+}
+
+.animate-thinking-dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.animate-thinking-dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.animate-slide-in-down {
+  animation: slideInDown 0.4s var(--ease-out-expo) forwards;
+}
+
+.animate-modal-backdrop {
+  animation: backdropFade 0.3s ease-out forwards;
+}
+
+.animate-modal-enter {
+  animation: modalEnter 0.4s var(--ease-spring) forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--daktari-surface) 0%,
+    var(--daktari-elevated) 50%,
+    var(--daktari-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Staggered children */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.5s var(--ease-out-expo) forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+
+/* ============================================
+   COMPONENT PATTERNS
+   ============================================ */
+
+/* Glass morphism card */
+.glass-card {
+  background: rgba(26, 29, 36, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--daktari-border);
+  border-radius: 16px;
+}
+
+/* Gradient mesh background */
+.gradient-mesh {
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(45, 212, 191, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+    var(--daktari-base);
+}
+
+/* Subtle noise texture overlay */
+.noise-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* Focus ring */
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--daktari-base), 0 0 0 4px var(--daktari-primary);
+}
+
+/* ============================================
+   TRIAGE COLOR UTILITIES
+   ============================================ */
+
+.triage-red {
+  --triage-color: var(--triage-red);
+  --triage-bg: var(--triage-red-bg);
+}
+
+.triage-orange {
+  --triage-color: var(--triage-orange);
+  --triage-bg: var(--triage-orange-bg);
+}
+
+.triage-yellow {
+  --triage-color: var(--triage-yellow);
+  --triage-bg: var(--triage-yellow-bg);
+}
+
+.triage-green {
+  --triage-color: var(--triage-green);
+  --triage-bg: var(--triage-green-bg);
+}
+
+/* ============================================
+   WAVEFORM VISUALIZATION
+   ============================================ */
+
+.waveform-bar {
+  transform-origin: center bottom;
+  animation: waveform 0.5s ease-in-out infinite;
+}
+
+.waveform-bar:nth-child(1) { animation-delay: 0s; }
+.waveform-bar:nth-child(2) { animation-delay: 0.1s; }
+.waveform-bar:nth-child(3) { animation-delay: 0.2s; }
+.waveform-bar:nth-child(4) { animation-delay: 0.3s; }
+.waveform-bar:nth-child(5) { animation-delay: 0.4s; }
+.waveform-bar:nth-child(6) { animation-delay: 0.35s; }
+.waveform-bar:nth-child(7) { animation-delay: 0.25s; }
+.waveform-bar:nth-child(8) { animation-delay: 0.15s; }
+.waveform-bar:nth-child(9) { animation-delay: 0.05s; }
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 500;
+  border-radius: 12px;
+  transition: all 0.2s var(--ease-out-expo);
+  cursor: pointer;
+  border: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--daktari-primary) 0%, var(--daktari-primary-dim) 100%);
+  color: var(--daktari-deep);
+  box-shadow: var(--shadow-sm), 0 0 20px var(--daktari-primary-glow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md), 0 0 30px var(--daktari-primary-intense);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: var(--daktari-elevated);
+  color: var(--daktari-text-secondary);
+  border: 1px solid var(--daktari-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--daktari-hover);
+  color: var(--daktari-text);
+  border-color: var(--daktari-border-strong);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--daktari-text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--daktari-elevated);
+  color: var(--daktari-text);
+}
+
+/* ============================================
+   INPUT STYLES
+   ============================================ */
+
+.input {
+  width: 100%;
+  background: var(--daktari-elevated);
+  border: 1px solid var(--daktari-border);
+  border-radius: 12px;
+  color: var(--daktari-text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  transition: all 0.2s var(--ease-out-expo);
+}
+
+.input::placeholder {
+  color: var(--daktari-text-muted);
+}
+
+.input:hover:not(:disabled) {
+  border-color: var(--daktari-border-strong);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--daktari-primary);
+  box-shadow: 0 0 0 3px var(--daktari-primary-glow);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   MESSAGE BUBBLES
+   ============================================ */
+
+.message-bubble {
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  max-width: 85%;
+  line-height: 1.5;
+}
+
+.message-user {
+  background: linear-gradient(135deg, var(--daktari-user) 0%, var(--daktari-user-dim) 100%);
+  color: white;
+  border-bottom-right-radius: 4px;
+  margin-left: auto;
+}
+
+.message-assistant {
+  background: var(--daktari-surface);
+  border: 1px solid var(--daktari-border);
+  color: var(--daktari-text);
+  border-bottom-left-radius: 4px;
+}
+
+.message-error {
+  background: var(--daktari-error-bg);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  color: var(--daktari-error);
+}
+
+/* ============================================
+   PROGRESS BAR
+   ============================================ */
+
+.progress-track {
+  height: 4px;
+  background: var(--daktari-elevated);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--daktari-primary) 0%, var(--daktari-primary-dim) 100%);
+  border-radius: 2px;
+  transition: width 0.5s var(--ease-out-expo);
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+@media (max-width: 640px) {
+  :root {
+    font-size: 15px;
+  }
+
+  .message-bubble {
+    max-width: 90%;
+  }
+}

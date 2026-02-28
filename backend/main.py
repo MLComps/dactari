@@ -14,6 +14,7 @@ from typing import Optional, AsyncGenerator
 from config import MISTRAL_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
 from icd10 import lookup_icd10, check_red_flags
 from handoff import generate_handoff_pdf
+from clinical_tools import suggest_differentials, assess_urgency, generate_recommendations, build_symptom_timeline
 
 app = FastAPI(title="Daktari API", version="1.0.0")
 
@@ -30,43 +31,57 @@ app.add_middleware(
 client = Mistral(api_key=MISTRAL_API_KEY)
 
 # System prompt for medical triage
-TRIAGE_SYSTEM_PROMPT = """You are Daktari, a medical intake assistant for community health workers.
+TRIAGE_SYSTEM_PROMPT = """You are Daktari, a warm and professional medical intake assistant for community health workers.
 
-LANGUAGE: Always respond in English. Assume all input is in English.
+LANGUAGE: Respond in English. Be warm, patient, and reassuring.
 
-INTAKE PROTOCOL (follow this order):
-1. Greet warmly, ask about chief complaint: "What brings you in today?"
-2. Ask onset/duration: "When did this start?"
-3. Ask severity: "On a scale of 1-10, how severe is it?"
-4. Use the check_red_flags tool to check for emergency symptoms
-5. Ask about 2-3 associated symptoms relevant to the chief complaint
-6. Ask relevant medical history (chronic conditions, medications, allergies)
-7. For each significant symptom, use lookup_icd10 tool to get the medical code
-8. Summarize findings back to patient and confirm accuracy
-9. Call generate_handoff tool when intake is complete
+## INTAKE PROTOCOL (follow this order):
 
-WHEN CITING MEDICAL DATA:
-- When you receive ICD-10 codes from tools, include them in your response like: "headache (ICD-10: R51, Source: WHO ICD-10)"
-- Always mention the data source when referencing medical codes or classifications
-- Format: "Symptom (ICD-10: CODE, Source: SOURCE_NAME)"
+### Phase 1: Symptom Collection
+1. Greet warmly, ask chief complaint: "Hello! I'm Daktari. What brings you in today?"
+2. Ask onset/duration: "When did this start? Has it been getting better or worse?"
+3. Ask severity: "On a scale of 1-10, how severe is it right now?"
+4. Ask about triggers: "Does anything make it better or worse?"
+5. Ask 2-3 associated symptoms relevant to the chief complaint
+6. Ask medical history: chronic conditions, current medications, allergies
 
-RED FLAGS (escalate immediately):
-- Chest pain + shortness of breath → Possible cardiac event
-- Severe headache + stiff neck + fever → Possible meningitis
-- Bleeding in pregnancy → Obstetric emergency
-- Altered consciousness → Neurological emergency
-- Face drooping + arm weakness + speech difficulty → Possible stroke
+### Phase 2: Clinical Assessment (AUTOMATIC - do this after collecting symptoms)
+7. Call `assess_urgency` tool with all symptoms and severity score - this uses the South African Triage Scale
+8. Call `lookup_icd10` for each significant symptom to get medical codes
+9. Call `suggest_differentials` tool with the complete symptom profile - this generates differential diagnoses for the clinician
 
-If ANY red flag detected:
-1. Say: "⚠️ URGENT: This requires immediate medical attention. Please go to the nearest health facility NOW."
-2. Still complete the handoff note for the receiving clinician
+### Phase 3: Handoff Generation
+10. Call `generate_handoff` with ALL data including:
+    - urgency assessment results
+    - differential diagnoses
+    - ICD-10 codes
+    - symptoms with timeline
+    - recommended clinical actions
 
-RULES:
-- NEVER diagnose conditions - only document symptoms
-- NEVER prescribe medications or treatments
-- You are doing STRUCTURED INTAKE only
-- Be warm, patient, and professional
-- Ask one question at a time for clarity"""
+## PATIENT COMMUNICATION:
+- When presenting results to the patient, use SIMPLE, REASSURING language
+- Tell them their triage level and what it means for next steps
+- DO NOT share differential diagnoses with the patient - those are for clinician handoff only
+- Example: "Based on your symptoms, I recommend you see a clinician within the next hour. I've prepared a detailed note for them."
+
+## TRIAGE COMMUNICATION:
+- 🔴 RED: "This needs immediate attention. Please go to the emergency department right away."
+- 🟠 ORANGE: "This is quite urgent. Please see a clinician within 10 minutes."
+- 🟡 YELLOW: "This should be seen soon. Please see a clinician within the next hour."
+- 🟢 GREEN: "This can be seen during normal clinic hours."
+
+## WHEN CITING MEDICAL DATA:
+- Include ICD-10 codes: "headache (ICD-10: R51)"
+- Mention data source when relevant
+
+## RULES:
+- NEVER diagnose - only document and triage
+- NEVER prescribe medications
+- Be warm and professional
+- Ask one question at a time
+- Always complete the full assessment before generating handoff
+- Include disclaimer: "AI-assisted triage — clinical judgment required"
+"""
 
 # Tool definitions for Mistral function calling
 TOOLS = [
@@ -88,7 +103,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "check_red_flags",
-            "description": "Check if combination of symptoms indicates emergency",
+            "description": "Quick keyword-based check for emergency symptoms (backup safety net)",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -105,8 +120,60 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "assess_urgency",
+            "description": "Assess clinical urgency using South African Triage Scale (SATS). Returns triage color, time-to-treatment target, and reasoning. Call this AFTER collecting all symptoms.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symptoms": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of all reported symptoms"
+                    },
+                    "severity_score": {
+                        "type": "integer",
+                        "description": "Pain/severity score from 1-10"
+                    },
+                    "duration": {"type": "string", "description": "How long symptoms have been present"},
+                    "vital_signs": {"type": "string", "description": "Vital signs if available"},
+                    "red_flags_detected": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Any red flags already identified"
+                    }
+                },
+                "required": ["symptoms", "severity_score"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "suggest_differentials",
+            "description": "After symptom intake is complete, suggest possible differential diagnoses for the CLINICIAN to consider. This is clinical decision support, NOT a patient-facing diagnosis.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symptoms": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of all reported symptoms in English"
+                    },
+                    "duration": {"type": "string"},
+                    "severity": {"type": "string"},
+                    "medical_history": {"type": "string"},
+                    "age_sex": {"type": "string", "description": "Patient age and sex if known"},
+                    "triggers": {"type": "string", "description": "What makes symptoms worse"}
+                },
+                "required": ["symptoms"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "generate_handoff",
-            "description": "Generate structured clinical handoff note. Call when intake is complete.",
+            "description": "Generate structured clinical handoff note with SBAR format. Call when intake AND assessments are complete.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -114,12 +181,43 @@ TOOLS = [
                     "symptoms": {"type": "array", "items": {"type": "string"}},
                     "duration": {"type": "string"},
                     "severity": {"type": "string"},
+                    "triggers": {"type": "string", "description": "What makes symptoms worse"},
                     "red_flags": {"type": "array", "items": {"type": "string"}},
                     "medical_history": {"type": "string"},
                     "patient_language": {"type": "string"},
-                    "urgency": {"type": "string", "enum": ["emergency", "urgent", "routine"]}
+                    "urgency_assessment": {
+                        "type": "object",
+                        "description": "Results from assess_urgency tool",
+                        "properties": {
+                            "color": {"type": "string"},
+                            "label": {"type": "string"},
+                            "time_target": {"type": "string"},
+                            "reasoning": {"type": "string"}
+                        }
+                    },
+                    "differentials": {
+                        "type": "array",
+                        "description": "Results from suggest_differentials tool",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "condition": {"type": "string"},
+                                "icd10_code": {"type": "string"},
+                                "confidence": {"type": "string"}
+                            }
+                        }
+                    },
+                    "recommended_actions": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Checklist of recommended clinical actions"
+                    },
+                    "symptom_timeline": {
+                        "type": "string",
+                        "description": "Text description of symptom progression"
+                    }
                 },
-                "required": ["chief_complaint", "symptoms", "urgency"]
+                "required": ["chief_complaint", "symptoms"]
             }
         }
     }
@@ -142,10 +240,16 @@ class HandoffRequest(BaseModel):
     symptoms: list[str]
     duration: Optional[str] = None
     severity: Optional[str] = None
+    triggers: Optional[str] = None
     red_flags: Optional[list[str]] = None
     medical_history: Optional[str] = None
     patient_language: Optional[str] = None
+    patient: Optional[dict] = None
     urgency: str = "routine"
+    urgency_assessment: Optional[dict] = None
+    differentials: Optional[list[dict]] = None
+    recommended_actions: Optional[list[str]] = None
+    symptom_timeline: Optional[str] = None
     icd_codes: Optional[list[str]] = None
 
 
@@ -170,6 +274,23 @@ async def execute_tool_call(tool_name: str, arguments: dict) -> dict:
         return await lookup_icd10(arguments["symptom"])
     elif tool_name == "check_red_flags":
         return check_red_flags(arguments["symptoms"])
+    elif tool_name == "assess_urgency":
+        return await assess_urgency(
+            symptoms=arguments["symptoms"],
+            severity_score=arguments.get("severity_score", 5),
+            duration=arguments.get("duration"),
+            vital_signs=arguments.get("vital_signs"),
+            red_flags_detected=arguments.get("red_flags_detected")
+        )
+    elif tool_name == "suggest_differentials":
+        return await suggest_differentials(
+            symptoms=arguments["symptoms"],
+            duration=arguments.get("duration"),
+            severity=arguments.get("severity"),
+            medical_history=arguments.get("medical_history"),
+            age_sex=arguments.get("age_sex"),
+            triggers=arguments.get("triggers")
+        )
     elif tool_name == "generate_handoff":
         return {"status": "handoff_ready", "data": arguments}
     else:
@@ -440,30 +561,9 @@ async def websocket_voice(websocket: WebSocket):
         while True:
             message = await websocket.receive()
 
-            # Handle binary audio data
+            # Handle binary audio data - just collect, transcribe at the end
             if "bytes" in message:
                 audio_buffer.extend(message["bytes"])
-
-                # If buffer is large enough, do interim transcription
-                if len(audio_buffer) > 16000:  # ~1 second of audio
-                    try:
-                        async with httpx.AsyncClient() as http_client:
-                            response = await http_client.post(
-                                "https://api.elevenlabs.io/v1/speech-to-text",
-                                headers={"xi-api-key": ELEVENLABS_API_KEY},
-                                files={"file": ("audio.webm", bytes(audio_buffer), "audio/webm")},
-                                data={"model_id": "scribe_v1"},
-                                timeout=10.0
-                            )
-                            if response.status_code == 200:
-                                data = response.json()
-                                await websocket.send_json({
-                                    "type": "transcription",
-                                    "text": data.get("text", ""),
-                                    "interim": True
-                                })
-                    except Exception:
-                        pass  # Interim transcription failed, continue collecting
 
             # Handle JSON messages
             elif "text" in message:
@@ -484,10 +584,10 @@ async def websocket_voice(websocket: WebSocket):
 
                                 if response.status_code == 200:
                                     transcription = response.json().get("text", "")
+                                    # Send final transcription to frontend
                                     await websocket.send_json({
                                         "type": "transcription",
-                                        "text": transcription,
-                                        "interim": False
+                                        "text": transcription
                                     })
 
                                     # Add to conversation and get AI response
@@ -496,42 +596,96 @@ async def websocket_voice(websocket: WebSocket):
                                         "content": transcription
                                     })
 
-                                    # Stream AI response
+                                    # Get AI response with tool support
                                     messages = [{"role": "system", "content": TRIAGE_SYSTEM_PROMPT}] + conversation_messages
 
-                                    full_response = ""
-                                    async with httpx.AsyncClient() as ai_client:
-                                        ai_response = await ai_client.post(
-                                            "https://api.mistral.ai/v1/chat/completions",
-                                            headers={
-                                                "Authorization": f"Bearer {MISTRAL_API_KEY}",
-                                                "Content-Type": "application/json"
-                                            },
-                                            json={
-                                                "model": "mistral-large-latest",
-                                                "messages": messages,
-                                                "stream": True
-                                            },
-                                            timeout=60.0
-                                        )
+                                    # Use SDK with tools for proper tool handling
+                                    response = client.chat.complete(
+                                        model="mistral-large-latest",
+                                        messages=messages,
+                                        tools=TOOLS,
+                                        tool_choice="auto"
+                                    )
 
-                                        async for line in ai_response.aiter_lines():
-                                            if line.startswith("data: "):
-                                                line_data = line[6:]
-                                                if line_data == "[DONE]":
-                                                    break
-                                                try:
-                                                    chunk = json.loads(line_data)
-                                                    if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
-                                                        text = chunk["choices"][0]["delta"]["content"]
-                                                        full_response += text
-                                                        await websocket.send_json({
-                                                            "type": "response",
-                                                            "text": text,
-                                                            "streaming": True
-                                                        })
-                                                except json.JSONDecodeError:
-                                                    continue
+                                    assistant_message = response.choices[0].message
+                                    full_response = assistant_message.content or ""
+
+                                    # Handle tool calls if present
+                                    if assistant_message.tool_calls:
+                                        tool_results = []
+                                        handoff_data = None
+
+                                        for tool_call in assistant_message.tool_calls:
+                                            tool_name = tool_call.function.name
+                                            arguments = json.loads(tool_call.function.arguments)
+                                            result = await execute_tool_call(tool_name, arguments)
+
+                                            if tool_name == "generate_handoff":
+                                                handoff_data = result.get("data")
+
+                                            # Send triage data immediately when assess_urgency is called
+                                            if tool_name == "assess_urgency":
+                                                await websocket.send_json({
+                                                    "type": "triage",
+                                                    "data": result
+                                                })
+
+                                            tool_results.append({
+                                                "tool_call_id": tool_call.id,
+                                                "name": tool_name,
+                                                "result": result
+                                            })
+
+                                        # Add tool messages to conversation
+                                        messages.append({
+                                            "role": "assistant",
+                                            "content": assistant_message.content,
+                                            "tool_calls": [
+                                                {
+                                                    "id": tc.id,
+                                                    "type": "function",
+                                                    "function": {
+                                                        "name": tc.function.name,
+                                                        "arguments": tc.function.arguments
+                                                    }
+                                                }
+                                                for tc in assistant_message.tool_calls
+                                            ]
+                                        })
+
+                                        for result in tool_results:
+                                            messages.append({
+                                                "role": "tool",
+                                                "tool_call_id": result["tool_call_id"],
+                                                "content": json.dumps(result["result"])
+                                            })
+
+                                        # Get follow-up response after tool execution
+                                        follow_up = client.chat.complete(
+                                            model="mistral-large-latest",
+                                            messages=messages,
+                                            tools=TOOLS,
+                                            tool_choice="auto"
+                                        )
+                                        full_response = follow_up.choices[0].message.content or full_response
+
+                                        # Send handoff data if available
+                                        if handoff_data:
+                                            await websocket.send_json({
+                                                "type": "handoff",
+                                                "data": handoff_data
+                                            })
+
+                                    # Send response in chunks for streaming effect
+                                    chunk_size = 20
+                                    for i in range(0, len(full_response), chunk_size):
+                                        chunk = full_response[i:i + chunk_size]
+                                        await websocket.send_json({
+                                            "type": "response",
+                                            "text": chunk,
+                                            "streaming": True
+                                        })
+                                        await asyncio.sleep(0.02)  # Small delay for streaming effect
 
                                     # Add assistant response to conversation
                                     conversation_messages.append({

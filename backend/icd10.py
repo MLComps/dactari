@@ -193,28 +193,174 @@ def check_red_flags(symptoms: list[str]) -> dict:
     }
 
 
-# Common symptom to ICD-10 mapping for quick lookup
+# Comprehensive ICD-10 symptom mapping for quick lookup
 COMMON_SYMPTOMS = {
+    # Head & Neurological
     "headache": {"code": "R51", "title": "Headache"},
-    "fever": {"code": "R50.9", "title": "Fever, unspecified"},
+    "head pain": {"code": "R51", "title": "Headache"},
+    "migraine": {"code": "G43.909", "title": "Migraine, unspecified"},
+    "dizziness": {"code": "R42", "title": "Dizziness and giddiness"},
+    "vertigo": {"code": "R42", "title": "Dizziness and giddiness"},
+    "fainting": {"code": "R55", "title": "Syncope and collapse"},
+    "syncope": {"code": "R55", "title": "Syncope and collapse"},
+    "seizure": {"code": "R56.9", "title": "Unspecified convulsions"},
+    "convulsion": {"code": "R56.9", "title": "Unspecified convulsions"},
+    "confusion": {"code": "R41.0", "title": "Disorientation, unspecified"},
+    "memory loss": {"code": "R41.3", "title": "Other amnesia"},
+    "numbness": {"code": "R20.0", "title": "Anesthesia of skin"},
+    "tingling": {"code": "R20.2", "title": "Paresthesia of skin"},
+    "weakness": {"code": "R53.1", "title": "Weakness"},
+    "tremor": {"code": "R25.1", "title": "Tremor, unspecified"},
+    "imbalance": {"code": "R26.81", "title": "Unsteadiness on feet"},
+    "unsteady": {"code": "R26.81", "title": "Unsteadiness on feet"},
+
+    # Eyes
+    "blurred vision": {"code": "H53.8", "title": "Other visual disturbances"},
+    "vision problems": {"code": "H53.9", "title": "Unspecified visual disturbance"},
+    "eye pain": {"code": "H57.10", "title": "Ocular pain, unspecified eye"},
+    "red eye": {"code": "H57.8", "title": "Other specified disorders of eye"},
+    "photophobia": {"code": "H53.14", "title": "Visual discomfort"},
+    "light sensitivity": {"code": "H53.14", "title": "Visual discomfort"},
+    "double vision": {"code": "H53.2", "title": "Diplopia"},
+
+    # Ear, Nose, Throat
+    "ear pain": {"code": "H92.09", "title": "Otalgia, unspecified ear"},
+    "earache": {"code": "H92.09", "title": "Otalgia, unspecified ear"},
+    "hearing loss": {"code": "H91.90", "title": "Unspecified hearing loss"},
+    "tinnitus": {"code": "H93.19", "title": "Tinnitus, unspecified ear"},
+    "sore throat": {"code": "J02.9", "title": "Acute pharyngitis, unspecified"},
+    "throat pain": {"code": "J02.9", "title": "Acute pharyngitis, unspecified"},
+    "runny nose": {"code": "J00", "title": "Acute nasopharyngitis"},
+    "nasal congestion": {"code": "R09.81", "title": "Nasal congestion"},
+    "stuffy nose": {"code": "R09.81", "title": "Nasal congestion"},
+    "nosebleed": {"code": "R04.0", "title": "Epistaxis"},
+    "difficulty swallowing": {"code": "R13.10", "title": "Dysphagia, unspecified"},
+    "hoarseness": {"code": "R49.0", "title": "Dysphonia"},
+
+    # Respiratory
     "cough": {"code": "R05", "title": "Cough"},
+    "dry cough": {"code": "R05.9", "title": "Cough, unspecified"},
+    "productive cough": {"code": "R05.9", "title": "Cough, unspecified"},
+    "shortness of breath": {"code": "R06.02", "title": "Shortness of breath"},
+    "breathing difficulty": {"code": "R06.00", "title": "Dyspnea, unspecified"},
+    "dyspnea": {"code": "R06.00", "title": "Dyspnea, unspecified"},
+    "wheezing": {"code": "R06.2", "title": "Wheezing"},
+    "chest tightness": {"code": "R07.89", "title": "Other chest pain"},
+    "rapid breathing": {"code": "R06.82", "title": "Tachypnea"},
+    "coughing blood": {"code": "R04.2", "title": "Hemoptysis"},
+    "hemoptysis": {"code": "R04.2", "title": "Hemoptysis"},
+
+    # Cardiovascular
+    "chest pain": {"code": "R07.9", "title": "Chest pain, unspecified"},
+    "heart palpitations": {"code": "R00.2", "title": "Palpitations"},
+    "palpitations": {"code": "R00.2", "title": "Palpitations"},
+    "rapid heartbeat": {"code": "R00.0", "title": "Tachycardia, unspecified"},
+    "slow heartbeat": {"code": "R00.1", "title": "Bradycardia, unspecified"},
+    "irregular heartbeat": {"code": "R00.8", "title": "Other abnormalities of heart beat"},
+    "high blood pressure": {"code": "R03.0", "title": "Elevated blood-pressure reading"},
+    "low blood pressure": {"code": "R03.1", "title": "Nonspecific low blood-pressure reading"},
+    "leg swelling": {"code": "R60.0", "title": "Localized edema"},
+
+    # Gastrointestinal
     "abdominal pain": {"code": "R10.9", "title": "Unspecified abdominal pain"},
     "stomach pain": {"code": "R10.9", "title": "Unspecified abdominal pain"},
-    "diarrhea": {"code": "R19.7", "title": "Diarrhea, unspecified"},
-    "vomiting": {"code": "R11.10", "title": "Vomiting, unspecified"},
+    "belly pain": {"code": "R10.9", "title": "Unspecified abdominal pain"},
     "nausea": {"code": "R11.0", "title": "Nausea"},
-    "chest pain": {"code": "R07.9", "title": "Chest pain, unspecified"},
+    "vomiting": {"code": "R11.10", "title": "Vomiting, unspecified"},
+    "diarrhea": {"code": "R19.7", "title": "Diarrhea, unspecified"},
+    "loose stool": {"code": "R19.7", "title": "Diarrhea, unspecified"},
+    "constipation": {"code": "K59.00", "title": "Constipation, unspecified"},
+    "bloating": {"code": "R14.0", "title": "Abdominal distension (gaseous)"},
+    "heartburn": {"code": "R12", "title": "Heartburn"},
+    "acid reflux": {"code": "K21.0", "title": "Gastro-esophageal reflux with esophagitis"},
+    "blood in stool": {"code": "K92.1", "title": "Melena"},
+    "rectal bleeding": {"code": "K62.5", "title": "Hemorrhage of anus and rectum"},
+    "loss of appetite": {"code": "R63.0", "title": "Anorexia"},
+    "difficulty eating": {"code": "R63.3", "title": "Feeding difficulties"},
+    "jaundice": {"code": "R17", "title": "Unspecified jaundice"},
+
+    # Musculoskeletal
     "back pain": {"code": "M54.9", "title": "Dorsalgia, unspecified"},
-    "fatigue": {"code": "R53.83", "title": "Other fatigue"},
-    "dizziness": {"code": "R42", "title": "Dizziness and giddiness"},
-    "shortness of breath": {"code": "R06.02", "title": "Shortness of breath"},
-    "sore throat": {"code": "J02.9", "title": "Acute pharyngitis, unspecified"},
-    "runny nose": {"code": "J00", "title": "Acute nasopharyngitis"},
-    "body aches": {"code": "M79.1", "title": "Myalgia"},
+    "lower back pain": {"code": "M54.5", "title": "Low back pain"},
+    "neck pain": {"code": "M54.2", "title": "Cervicalgia"},
+    "stiff neck": {"code": "M54.2", "title": "Cervicalgia"},
     "joint pain": {"code": "M25.50", "title": "Pain in unspecified joint"},
-    "rash": {"code": "R21", "title": "Rash and other nonspecific skin eruption"},
+    "knee pain": {"code": "M25.569", "title": "Pain in unspecified knee"},
+    "hip pain": {"code": "M25.559", "title": "Pain in unspecified hip"},
+    "shoulder pain": {"code": "M25.519", "title": "Pain in unspecified shoulder"},
+    "muscle pain": {"code": "M79.1", "title": "Myalgia"},
+    "body aches": {"code": "M79.1", "title": "Myalgia"},
+    "muscle cramps": {"code": "R25.2", "title": "Cramp and spasm"},
+    "muscle weakness": {"code": "M62.81", "title": "Muscle weakness (generalized)"},
     "swelling": {"code": "R60.9", "title": "Edema, unspecified"},
+
+    # Skin
+    "rash": {"code": "R21", "title": "Rash and other nonspecific skin eruption"},
+    "skin rash": {"code": "R21", "title": "Rash and other nonspecific skin eruption"},
+    "itching": {"code": "L29.9", "title": "Pruritus, unspecified"},
+    "itchy skin": {"code": "L29.9", "title": "Pruritus, unspecified"},
+    "hives": {"code": "L50.9", "title": "Urticaria, unspecified"},
+    "skin lesion": {"code": "L98.9", "title": "Disorder of skin, unspecified"},
+    "wound": {"code": "T14.8", "title": "Other injury of unspecified body region"},
+    "burn": {"code": "T30.0", "title": "Burn of unspecified body region"},
+    "bruise": {"code": "T14.8", "title": "Other injury of unspecified body region"},
+    "skin infection": {"code": "L08.9", "title": "Local infection of skin, unspecified"},
+    "abscess": {"code": "L02.91", "title": "Cutaneous abscess, unspecified"},
+    "boil": {"code": "L02.91", "title": "Cutaneous abscess, unspecified"},
+
+    # Urological
+    "painful urination": {"code": "R30.0", "title": "Dysuria"},
+    "burning urination": {"code": "R30.0", "title": "Dysuria"},
+    "frequent urination": {"code": "R35.0", "title": "Frequency of micturition"},
+    "blood in urine": {"code": "R31.9", "title": "Hematuria, unspecified"},
+    "urinary incontinence": {"code": "R32", "title": "Unspecified urinary incontinence"},
+    "difficulty urinating": {"code": "R33.9", "title": "Retention of urine, unspecified"},
+    "flank pain": {"code": "R10.9", "title": "Unspecified abdominal pain"},
+
+    # Reproductive/OB-GYN
+    "vaginal bleeding": {"code": "N93.9", "title": "Abnormal uterine bleeding, unspecified"},
+    "vaginal discharge": {"code": "N89.8", "title": "Other specified noninflammatory disorders of vagina"},
+    "pelvic pain": {"code": "R10.2", "title": "Pelvic and perineal pain"},
+    "menstrual pain": {"code": "N94.6", "title": "Dysmenorrhea, unspecified"},
+    "missed period": {"code": "N91.2", "title": "Amenorrhea, unspecified"},
+    "breast pain": {"code": "N64.4", "title": "Mastodynia"},
+    "pregnancy bleeding": {"code": "O20.9", "title": "Hemorrhage in early pregnancy, unspecified"},
+
+    # General/Constitutional
+    "fever": {"code": "R50.9", "title": "Fever, unspecified"},
+    "high temperature": {"code": "R50.9", "title": "Fever, unspecified"},
+    "chills": {"code": "R68.83", "title": "Chills (without fever)"},
+    "night sweats": {"code": "R61", "title": "Generalized hyperhidrosis"},
+    "fatigue": {"code": "R53.83", "title": "Other fatigue"},
+    "tiredness": {"code": "R53.83", "title": "Other fatigue"},
+    "malaise": {"code": "R53.81", "title": "Other malaise"},
+    "weight loss": {"code": "R63.4", "title": "Abnormal weight loss"},
+    "weight gain": {"code": "R63.5", "title": "Abnormal weight gain"},
+    "dehydration": {"code": "E86.0", "title": "Dehydration"},
+    "thirst": {"code": "R63.1", "title": "Polydipsia"},
+    "excessive thirst": {"code": "R63.1", "title": "Polydipsia"},
     "bleeding": {"code": "R58", "title": "Hemorrhage, not elsewhere classified"},
+    "swollen lymph nodes": {"code": "R59.9", "title": "Enlarged lymph nodes, unspecified"},
+
+    # Mental Health
+    "anxiety": {"code": "F41.9", "title": "Anxiety disorder, unspecified"},
+    "depression": {"code": "F32.9", "title": "Major depressive disorder, unspecified"},
+    "insomnia": {"code": "G47.00", "title": "Insomnia, unspecified"},
+    "sleep problems": {"code": "G47.9", "title": "Sleep disorder, unspecified"},
+    "stress": {"code": "F43.9", "title": "Reaction to severe stress, unspecified"},
+    "mood changes": {"code": "R45.89", "title": "Other symptoms involving emotional state"},
+
+    # Pediatric Common
+    "diaper rash": {"code": "L22", "title": "Diaper dermatitis"},
+    "colic": {"code": "R10.83", "title": "Colic"},
+    "failure to thrive": {"code": "R62.51", "title": "Failure to thrive (child)"},
+    "developmental delay": {"code": "R62.50", "title": "Unspecified lack of expected normal development"},
+
+    # Tropical/Regional (East Africa relevant)
+    "malaria symptoms": {"code": "B54", "title": "Unspecified malaria"},
+    "yellow eyes": {"code": "R17", "title": "Unspecified jaundice"},
+    "pale skin": {"code": "R23.1", "title": "Pallor"},
+    "dark urine": {"code": "R82.99", "title": "Other abnormal findings in urine"},
 }
 
 
