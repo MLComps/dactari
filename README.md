@@ -20,12 +20,14 @@ Daktari is an AI-powered medical triage assistant designed for healthcare worker
 
 ### Key Capabilities
 
-- **Voice-First Interface** - Record symptoms in Kiswahili, Kinyarwanda, English, or French
+- **Voice-First Interface** - Record symptoms in English, French, or Spanish
 - **Clinical Triage** - Automated urgency assessment using SATS (South African Triage Scale)
-- **ICD-10 Mapping** - Symptoms mapped to standardized medical codes
+- **ICD-10 Mapping** - Symptoms mapped to standardized medical codes with multilingual support
 - **Differential Diagnosis** - AI-suggested conditions ranked by likelihood
 - **SBAR Handoff** - Professional clinical handoff PDFs for healthcare providers
 - **Red Flag Detection** - Automatic identification of emergency symptoms
+- **Medical Image Analysis** - AI-powered visual assessment of visible conditions using Pixtral Large
+- **Emergency Helplines** - Geolocation-based emergency numbers for 50+ countries
 
 ---
 
@@ -33,15 +35,17 @@ Daktari is an AI-powered medical triage assistant designed for healthcare worker
 
 | Feature | Description |
 |---------|-------------|
-| **Multilingual Voice Input** | Speech-to-text in 4 languages via ElevenLabs Scribe |
+| **Multilingual Voice Input** | Speech-to-text in 3 languages (English, French, Spanish) via ElevenLabs Scribe |
 | **Real-time Transcription** | WebSocket-based streaming for instant feedback |
 | **SATS Triage** | 4-level urgency classification (Red/Orange/Yellow/Green) |
-| **ICD-10 Codes** | 150+ symptom mappings to WHO ICD-10 codes |
+| **ICD-10 Codes** | 150+ symptom mappings with multilingual translation support |
 | **Differential Suggestions** | AI-generated differentials with confidence levels |
 | **Clinical Handoff PDF** | SBAR format with triage banner, differentials, recommendations |
 | **Text-to-Speech** | AI voice responses for accessibility |
 | **Symptom Timeline** | Visual progression of symptoms over time |
 | **Red Flag Alerts** | Keyword + AI-based emergency detection |
+| **Medical Image Analysis** | Agentic photo requests for visible conditions (rashes, burns, wounds) via Pixtral Large |
+| **Emergency Helplines** | Auto-detected emergency numbers based on user geolocation (50+ countries) |
 
 ---
 
@@ -49,8 +53,9 @@ Daktari is an AI-powered medical triage assistant designed for healthcare worker
 
 ### Backend
 - **FastAPI** - High-performance Python web framework
-- **Mistral AI** - Large (conversation) + Small (clinical tools) models
+- **Mistral AI** - Large (conversation) + Small (clinical tools) + Pixtral Large (image analysis)
 - **ElevenLabs** - Speech-to-text (Scribe) and text-to-speech
+- **NLM Clinical Tables API** - ICD-10 code lookups
 - **ReportLab** - PDF generation
 - **WebSockets** - Real-time voice streaming
 
@@ -58,6 +63,8 @@ Daktari is an AI-powered medical triage assistant designed for healthcare worker
 - **React 18** - UI framework
 - **Vite** - Build tool
 - **Web Audio API** - Real-time waveform visualization
+- **Geolocation API** - Emergency helpline detection
+- **BigDataCloud API** - Reverse geocoding for country detection
 
 ---
 
@@ -73,9 +80,10 @@ Daktari is an AI-powered medical triage assistant designed for healthcare worker
 
 | Service | Purpose | Get it at |
 |---------|---------|-----------|
-| Mistral AI | LLM for conversation & clinical tools | [console.mistral.ai](https://console.mistral.ai) |
+| Mistral AI | LLM for conversation, clinical tools & image analysis | [console.mistral.ai](https://console.mistral.ai) |
 | ElevenLabs | Speech-to-text & text-to-speech | [elevenlabs.io](https://elevenlabs.io) |
-| WHO ICD API (optional) | Official ICD-10 lookups | [icd.who.int/icdapi](https://icd.who.int/icdapi) |
+
+**Note:** ICD-10 lookups use the free NLM Clinical Tables API (no key required). Emergency number geolocation uses the free BigDataCloud API.
 
 ### Installation
 
@@ -113,10 +121,6 @@ MISTRAL_API_KEY=your-mistral-api-key-here
 # Required for voice features
 ELEVENLABS_API_KEY=your-elevenlabs-api-key-here
 ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
-
-# Optional - for official ICD-10 lookups
-WHO_CLIENT_ID=your-who-client-id-here
-WHO_CLIENT_SECRET=your-who-client-secret-here
 
 # Server config
 HOST=0.0.0.0
@@ -206,8 +210,9 @@ npm run preview
 When you open the app, you'll see the **Patient Intake Modal**:
 
 - Enter patient name, age, gender
-- Select preferred language (Kiswahili, Kinyarwanda, English, Français)
+- Select preferred language (English, Français, Español)
 - Optionally add contact number
+- View auto-detected emergency helpline based on your location
 - Click "Start Triage"
 
 ### 2. Describe Symptoms
@@ -232,10 +237,12 @@ Choose your input method:
 Daktari will:
 
 1. Ask clarifying questions (duration, severity, history)
-2. Map symptoms to ICD-10 codes
+2. Map symptoms to ICD-10 codes (multilingual input supported)
 3. Check for red flags
-4. Assess urgency using SATS
-5. Generate differential diagnoses
+4. **Request photos** for visible conditions (rashes, burns, wounds, swelling)
+5. Analyze images using Pixtral Large for visual assessment
+6. Assess urgency using SATS
+7. Generate differential diagnoses
 
 ### 4. Triage Result
 
@@ -260,10 +267,10 @@ When assessment is complete:
 ```
 darktari-mixtral/
 ├── backend/
-│   ├── main.py              # FastAPI app, WebSocket handlers
-│   ├── clinical_tools.py    # Differential & urgency assessment
+│   ├── main.py              # FastAPI app, WebSocket handlers, image analysis
+│   ├── clinical_tools.py    # Differential, urgency assessment, Pixtral image analysis
 │   ├── handoff.py           # PDF generation (SBAR format)
-│   ├── icd10.py             # ICD-10 symptom mappings
+│   ├── icd10.py             # ICD-10 mappings with multilingual symptom translations
 │   ├── config.py            # Environment configuration
 │   ├── requirements.txt     # Python dependencies
 │   ├── .env                 # API keys (create from .env.example)
@@ -272,8 +279,9 @@ darktari-mixtral/
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx          # Main React component
+│   │   ├── emergencyNumbers.js  # Emergency helplines database (50+ countries)
 │   │   ├── main.jsx         # React entry point
-│   │   └── index.css        # Global styles (if using)
+│   │   └── index.css        # Global styles
 │   ├── index.html           # HTML template
 │   ├── vite.config.js       # Vite configuration
 │   └── package.json         # Node dependencies
@@ -293,6 +301,7 @@ darktari-mixtral/
 | POST | `/chat/stream` | Streaming chat response |
 | POST | `/tts` | Text-to-speech conversion |
 | POST | `/handoff` | Generate PDF handoff |
+| POST | `/analyze-image` | Analyze medical image with Pixtral Large |
 | GET | `/health` | Health check |
 
 ### WebSocket
@@ -317,6 +326,7 @@ darktari-mixtral/
 { "type": "response_complete", "full_text": "..." }
 { "type": "triage", "data": { "color": "yellow", ... } }
 { "type": "handoff", "data": { "differentials": [...], ... } }
+{ "type": "image_request", "data": { "reason": "...", "body_area": "...", "condition_type": "..." } }
 { "type": "audio", "data": "<base64>" }
 { "type": "error", "message": "..." }
 ```
@@ -326,9 +336,10 @@ darktari-mixtral/
 | Tool | Purpose |
 |------|---------|
 | `check_red_flags` | Keyword-based emergency detection |
-| `lookup_icd10` | Map symptoms to ICD-10 codes |
+| `lookup_icd10` | Map symptoms to ICD-10 codes (multilingual) |
 | `assess_urgency` | SATS triage assessment |
 | `suggest_differentials` | Generate differential diagnoses |
+| `request_image` | Agentic photo request for visible conditions |
 
 ---
 
@@ -340,6 +351,37 @@ darktari-mixtral/
 | 🟠 Orange | Very Urgent | 10 minutes | Severe pain 8-10, chest pain + SOB |
 | 🟡 Yellow | Urgent | 60 minutes | Moderate pain 5-7, progressive symptoms |
 | 🟢 Green | Routine | 4 hours | Minor injuries, stable chronic symptoms |
+
+---
+
+## Recent Updates
+
+### Medical Image Analysis (Pixtral Large)
+The AI can now request photos for visible conditions and analyze them:
+- **Agentic requests** - AI determines when a photo would help diagnosis
+- **Supported conditions** - Rashes, burns, wounds, swelling, skin conditions, eye issues
+- **Visual assessment** - Pixtral Large provides structured analysis including appearance, severity estimate, and recommendations
+- **Optional** - Patients can skip image upload if uncomfortable
+
+### Emergency Helplines
+Auto-detected emergency numbers based on geolocation:
+- **50+ countries** supported with ambulance, police, and fire numbers
+- **Africa-focused** - Comprehensive coverage for African nations
+- **Geolocation** - Uses browser location + BigDataCloud for country detection
+- **One-tap call** - Emergency numbers displayed in patient modal
+
+### Multilingual ICD-10 Support
+Symptom recognition now works in multiple languages:
+- **French** - 100+ symptom translations (mal de tête → headache)
+- **Spanish** - 100+ symptom translations (dolor de cabeza → headache)
+- **English** - Primary language with 150+ symptom mappings
+- **NLM API** - Clinical Tables API for extended ICD-10 lookups
+
+### Language Support
+Interface and conversation available in:
+- **English** - Default
+- **Français** - French (formal "vous" form)
+- **Español** - Spanish (formal "usted" form)
 
 ---
 
@@ -381,11 +423,9 @@ Check backend logs for detailed error messages.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MISTRAL_API_KEY` | Yes | - | Mistral AI API key |
-| `ELEVENLABS_API_KEY` | Yes* | - | ElevenLabs API key (*for voice) |
+| `MISTRAL_API_KEY` | Yes | - | Mistral AI API key (includes Pixtral Large access) |
+| `ELEVENLABS_API_KEY` | Yes* | - | ElevenLabs API key (*for voice features) |
 | `ELEVENLABS_VOICE_ID` | No | 21m00Tcm4TlvDq8ikWAM | Voice ID for TTS |
-| `WHO_CLIENT_ID` | No | - | WHO ICD API client ID |
-| `WHO_CLIENT_SECRET` | No | - | WHO ICD API secret |
 | `HOST` | No | 0.0.0.0 | Server host |
 | `PORT` | No | 8000 | Server port |
 | `DEBUG` | No | true | Enable debug mode |

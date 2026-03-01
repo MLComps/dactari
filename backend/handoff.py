@@ -294,8 +294,12 @@ def generate_handoff_pdf(data: dict) -> str:
         elif country:
             p_location_str = country
 
-    # Map language codes to names
-    lang_map = {'sw': 'Kiswahili', 'rw': 'Kinyarwanda', 'en': 'English', 'fr': 'Français'}
+    # Map language codes to names (Mistral-supported languages)
+    lang_map = {
+        'en': 'English',
+        'fr': 'Français',
+        'es': 'Español',
+    }
     if p_lang in lang_map:
         p_lang = lang_map[p_lang]
 

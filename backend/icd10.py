@@ -312,11 +312,293 @@ COMMON_SYMPTOMS = {
     "dark urine": {"code": "R82.99", "title": "Other abnormal findings in urine"},
 }
 
+# ============================================================
+# MULTILINGUAL SYMPTOM TRANSLATIONS
+# Maps non-English symptoms to English equivalents
+# ============================================================
+
+SYMPTOM_TRANSLATIONS = {
+    # French (Français)
+    "fr": {
+        # Head & Neurological
+        "mal de tête": "headache",
+        "maux de tête": "headache",
+        "céphalée": "headache",
+        "migraine": "migraine",
+        "vertige": "dizziness",
+        "vertiges": "dizziness",
+        "évanouissement": "fainting",
+        "convulsion": "seizure",
+        "convulsions": "seizure",
+        "confusion": "confusion",
+        "perte de mémoire": "memory loss",
+        "engourdissement": "numbness",
+        "fourmillement": "tingling",
+        "faiblesse": "weakness",
+        "tremblement": "tremor",
+        # Eyes
+        "vision floue": "blurred vision",
+        "douleur oculaire": "eye pain",
+        "mal aux yeux": "eye pain",
+        "yeux rouges": "red eye",
+        # Ear, Nose, Throat
+        "mal d'oreille": "ear pain",
+        "douleur à l'oreille": "ear pain",
+        "perte auditive": "hearing loss",
+        "mal de gorge": "sore throat",
+        "douleur à la gorge": "sore throat",
+        "nez qui coule": "runny nose",
+        "nez bouché": "nasal congestion",
+        "saignement de nez": "nosebleed",
+        "difficulté à avaler": "difficulty swallowing",
+        # Respiratory
+        "toux": "cough",
+        "toux sèche": "dry cough",
+        "essoufflement": "shortness of breath",
+        "difficulté à respirer": "difficulty breathing",
+        "respiration difficile": "difficulty breathing",
+        "respiration sifflante": "wheezing",
+        "oppression thoracique": "chest tightness",
+        # Cardiovascular
+        "douleur thoracique": "chest pain",
+        "douleur à la poitrine": "chest pain",
+        "mal à la poitrine": "chest pain",
+        "palpitations": "palpitations",
+        "battements cardiaques rapides": "rapid heartbeat",
+        "hypertension": "high blood pressure",
+        "jambes enflées": "leg swelling",
+        # Gastrointestinal
+        "douleur abdominale": "abdominal pain",
+        "mal au ventre": "stomach pain",
+        "mal d'estomac": "stomach pain",
+        "nausée": "nausea",
+        "nausées": "nausea",
+        "vomissement": "vomiting",
+        "vomissements": "vomiting",
+        "diarrhée": "diarrhea",
+        "constipation": "constipation",
+        "ballonnement": "bloating",
+        "brûlures d'estomac": "heartburn",
+        "sang dans les selles": "blood in stool",
+        "perte d'appétit": "loss of appetite",
+        "jaunisse": "jaundice",
+        # Musculoskeletal
+        "mal de dos": "back pain",
+        "douleur au dos": "back pain",
+        "douleur lombaire": "lower back pain",
+        "douleur au cou": "neck pain",
+        "torticolis": "stiff neck",
+        "douleur articulaire": "joint pain",
+        "douleur au genou": "knee pain",
+        "douleur à la hanche": "hip pain",
+        "douleur à l'épaule": "shoulder pain",
+        "douleur musculaire": "muscle pain",
+        "courbatures": "body aches",
+        "crampes": "muscle cramps",
+        "gonflement": "swelling",
+        # Skin
+        "éruption cutanée": "rash",
+        "boutons": "rash",
+        "démangeaisons": "itching",
+        "urticaire": "hives",
+        "plaie": "wound",
+        "brûlure": "burn",
+        "bleu": "bruise",
+        "ecchymose": "bruise",
+        "abcès": "abscess",
+        # Urological
+        "miction douloureuse": "painful urination",
+        "brûlure urinaire": "burning urination",
+        "envie fréquente d'uriner": "frequent urination",
+        "sang dans les urines": "blood in urine",
+        # General
+        "fièvre": "fever",
+        "température": "fever",
+        "frissons": "chills",
+        "sueurs nocturnes": "night sweats",
+        "fatigue": "fatigue",
+        "épuisement": "fatigue",
+        "perte de poids": "weight loss",
+        "déshydratation": "dehydration",
+        "soif excessive": "excessive thirst",
+        "saignement": "bleeding",
+        "ganglions enflés": "swollen lymph nodes",
+        # Mental Health
+        "anxiété": "anxiety",
+        "dépression": "depression",
+        "insomnie": "insomnia",
+        "troubles du sommeil": "sleep problems",
+        "stress": "stress",
+        # Pediatric
+        "érythème fessier": "diaper rash",
+        "colique": "colic",
+        # Emergency
+        "inconscient": "unconscious",
+        "ne répond pas": "unresponsive",
+        "empoisonnement": "poisoning",
+        "morsure de serpent": "snake bite",
+    },
+
+    # Spanish (Español)
+    "es": {
+        # Head & Neurological
+        "dolor de cabeza": "headache",
+        "cefalea": "headache",
+        "migraña": "migraine",
+        "mareo": "dizziness",
+        "mareos": "dizziness",
+        "vértigo": "vertigo",
+        "desmayo": "fainting",
+        "convulsión": "seizure",
+        "convulsiones": "seizure",
+        "confusión": "confusion",
+        "pérdida de memoria": "memory loss",
+        "entumecimiento": "numbness",
+        "hormigueo": "tingling",
+        "debilidad": "weakness",
+        "temblor": "tremor",
+        # Eyes
+        "visión borrosa": "blurred vision",
+        "dolor de ojos": "eye pain",
+        "dolor ocular": "eye pain",
+        "ojo rojo": "red eye",
+        "ojos rojos": "red eye",
+        "visión doble": "double vision",
+        # Ear, Nose, Throat
+        "dolor de oído": "ear pain",
+        "pérdida de audición": "hearing loss",
+        "zumbido en los oídos": "tinnitus",
+        "dolor de garganta": "sore throat",
+        "nariz congestionada": "nasal congestion",
+        "congestión nasal": "nasal congestion",
+        "goteo nasal": "runny nose",
+        "sangrado nasal": "nosebleed",
+        "dificultad para tragar": "difficulty swallowing",
+        "ronquera": "hoarseness",
+        # Respiratory
+        "tos": "cough",
+        "tos seca": "dry cough",
+        "falta de aire": "shortness of breath",
+        "dificultad para respirar": "difficulty breathing",
+        "falta de aliento": "shortness of breath",
+        "sibilancia": "wheezing",
+        "opresión en el pecho": "chest tightness",
+        "tos con sangre": "coughing blood",
+        # Cardiovascular
+        "dolor de pecho": "chest pain",
+        "dolor en el pecho": "chest pain",
+        "dolor torácico": "chest pain",
+        "palpitaciones": "palpitations",
+        "latidos rápidos": "rapid heartbeat",
+        "presión arterial alta": "high blood pressure",
+        "hinchazón de piernas": "leg swelling",
+        # Gastrointestinal
+        "dolor abdominal": "abdominal pain",
+        "dolor de estómago": "stomach pain",
+        "dolor de barriga": "stomach pain",
+        "náusea": "nausea",
+        "náuseas": "nausea",
+        "vómito": "vomiting",
+        "vómitos": "vomiting",
+        "diarrea": "diarrhea",
+        "estreñimiento": "constipation",
+        "hinchazón abdominal": "bloating",
+        "acidez": "heartburn",
+        "sangre en las heces": "blood in stool",
+        "pérdida de apetito": "loss of appetite",
+        "ictericia": "jaundice",
+        # Musculoskeletal
+        "dolor de espalda": "back pain",
+        "dolor lumbar": "lower back pain",
+        "dolor de cuello": "neck pain",
+        "cuello rígido": "stiff neck",
+        "dolor articular": "joint pain",
+        "dolor de rodilla": "knee pain",
+        "dolor de cadera": "hip pain",
+        "dolor de hombro": "shoulder pain",
+        "dolor muscular": "muscle pain",
+        "dolores corporales": "body aches",
+        "calambres": "muscle cramps",
+        "hinchazón": "swelling",
+        # Skin
+        "erupción": "rash",
+        "sarpullido": "rash",
+        "picazón": "itching",
+        "urticaria": "hives",
+        "herida": "wound",
+        "quemadura": "burn",
+        "moretón": "bruise",
+        "absceso": "abscess",
+        # Urological
+        "dolor al orinar": "painful urination",
+        "ardor al orinar": "burning urination",
+        "micción frecuente": "frequent urination",
+        "sangre en la orina": "blood in urine",
+        # General
+        "fiebre": "fever",
+        "calentura": "fever",
+        "escalofríos": "chills",
+        "sudores nocturnos": "night sweats",
+        "fatiga": "fatigue",
+        "cansancio": "fatigue",
+        "agotamiento": "fatigue",
+        "pérdida de peso": "weight loss",
+        "deshidratación": "dehydration",
+        "sed excesiva": "excessive thirst",
+        "sangrado": "bleeding",
+        "ganglios inflamados": "swollen lymph nodes",
+        # Mental Health
+        "ansiedad": "anxiety",
+        "depresión": "depression",
+        "insomnio": "insomnia",
+        "problemas de sueño": "sleep problems",
+        "estrés": "stress",
+        # Pediatric
+        "dermatitis del pañal": "diaper rash",
+        "cólico": "colic",
+        # Emergency
+        "inconsciente": "unconscious",
+        "no responde": "unresponsive",
+        "envenenamiento": "poisoning",
+        "mordedura de serpiente": "snake bite",
+    },
+
+}
+
+
+def translate_symptom(symptom: str) -> str:
+    """Translate a symptom from any supported language to English."""
+    symptom_lower = symptom.lower().strip()
+
+    # Check each language's translations
+    for lang_code, translations in SYMPTOM_TRANSLATIONS.items():
+        for foreign, english in translations.items():
+            if foreign in symptom_lower or symptom_lower in foreign:
+                return english
+
+    # No translation found, return original
+    return symptom_lower
+
 
 def quick_icd10_lookup(symptom: str) -> Optional[dict]:
-    """Quick local lookup for common symptoms."""
+    """Quick local lookup for common symptoms.
+
+    Supports multilingual input (French, Spanish, Portuguese, Kiswahili, etc.)
+    by translating to English first.
+    """
     symptom_lower = symptom.lower().strip()
+
+    # First, try direct English lookup
     for key, value in COMMON_SYMPTOMS.items():
         if key in symptom_lower or symptom_lower in key:
             return {"codes": [value], "source": "local"}
+
+    # If not found, try translating from other languages
+    translated = translate_symptom(symptom_lower)
+    if translated != symptom_lower:
+        # Translation found, look up the English term
+        for key, value in COMMON_SYMPTOMS.items():
+            if key in translated or translated in key:
+                return {"codes": [value], "source": "local", "translated_from": symptom_lower}
+
     return None

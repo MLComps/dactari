@@ -362,3 +362,153 @@ def build_symptom_timeline(symptoms_with_timing: list[dict]) -> dict:
         "text_representation": "\n".join(lines),
         "total_days": max(days.keys()) if days else 0
     }
+
+
+# ============================================================
+# IMAGE ANALYSIS (Pixtral)
+# ============================================================
+
+IMAGE_ANALYSIS_PROMPT = """You are a medical triage assistant analyzing an image for clinical assessment purposes.
+
+IMPORTANT DISCLAIMERS:
+- This is NOT a diagnosis - only observations for triage
+- Always recommend professional medical evaluation
+- Note any limitations in image quality
+
+Analyze this image and provide:
+
+1. **Visual Observations**: Describe what you see objectively
+   - Location, size, shape, color
+   - Pattern (localized, diffuse, clustered)
+   - Any notable characteristics
+
+2. **Clinical Descriptors**: Use appropriate medical terminology
+   - For skin: erythema, papule, vesicle, pustule, macule, plaque, etc.
+   - For wounds: laceration, abrasion, contusion, etc.
+   - For swelling: edema, inflammation, etc.
+
+3. **Relevant Considerations**: What conditions might present this way?
+   - List 2-3 possibilities (NOT diagnoses)
+   - Note any concerning features that warrant urgent evaluation
+
+4. **Triage Implications**: Does this visual finding affect urgency?
+   - Signs of infection (spreading redness, pus, streaking)
+   - Signs of severe reaction (extensive involvement, systemic appearance)
+   - Signs requiring immediate care
+
+5. **Image Quality Note**: Comment on any limitations
+
+Return your response as JSON:
+{
+  "observations": "Objective description of what is visible",
+  "clinical_descriptors": ["descriptor1", "descriptor2"],
+  "possible_conditions": [
+    {"condition": "Condition name", "icd10_hint": "Code", "likelihood": "HIGH/MEDIUM/LOW"}
+  ],
+  "concerning_features": ["feature1", "feature2"],
+  "urgency_impact": "none|increases|significantly_increases",
+  "recommended_action": "What should happen next",
+  "image_quality": "good|adequate|poor",
+  "limitations": "Any limitations in assessment"
+}
+
+Body area being examined: {body_area}
+Condition type reported: {condition_type}
+Patient-reported context: {context}
+"""
+
+
+async def analyze_medical_image(
+    image_base64: str,
+    body_area: str = "unspecified",
+    condition_type: str = "other",
+    context: str = "No additional context provided"
+) -> dict:
+    """Analyze a medical image using Pixtral for visual assessment.
+
+    Args:
+        image_base64: Base64-encoded image data
+        body_area: Which body part (e.g., 'arm', 'face', 'throat')
+        condition_type: Type of condition (skin, eye, wound, etc.)
+        context: Patient-reported symptoms or context
+
+    Returns:
+        dict with visual observations and clinical considerations
+    """
+    logger.info("🖼️ ANALYZE_MEDICAL_IMAGE called")
+    logger.info(f"   Body area: {body_area}")
+    logger.info(f"   Condition type: {condition_type}")
+    logger.info(f"   Image size: {len(image_base64)} chars (base64)")
+
+    # Prepare the prompt with context
+    prompt = IMAGE_ANALYSIS_PROMPT.format(
+        body_area=body_area,
+        condition_type=condition_type,
+        context=context
+    )
+
+    try:
+        logger.info("   Calling Pixtral Large for image analysis...")
+        start_time = time.time()
+
+        # Determine image type from base64 header or default to jpeg
+        if image_base64.startswith("/9j/"):
+            mime_type = "image/jpeg"
+        elif image_base64.startswith("iVBOR"):
+            mime_type = "image/png"
+        elif image_base64.startswith("R0lGOD"):
+            mime_type = "image/gif"
+        else:
+            mime_type = "image/jpeg"  # Default
+
+        response = client.chat.complete(
+            model="pixtral-large-latest",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{mime_type};base64,{image_base64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            response_format={"type": "json_object"}
+        )
+
+        elapsed = time.time() - start_time
+        logger.info(f"   ✅ Pixtral responded in {elapsed:.2f}s")
+
+        result = json.loads(response.choices[0].message.content)
+        result["source"] = "Pixtral Large - Visual Analysis"
+        result["analyzed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        result["body_area"] = body_area
+        result["condition_type"] = condition_type
+
+        logger.info(f"   📋 Observations: {result.get('observations', 'N/A')[:100]}...")
+        logger.info(f"   ⚠️ Urgency impact: {result.get('urgency_impact', 'none')}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"   ❌ Image analysis failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "error": str(e),
+            "observations": "Unable to analyze image",
+            "clinical_descriptors": [],
+            "possible_conditions": [],
+            "concerning_features": [],
+            "urgency_impact": "none",
+            "recommended_action": "Continue with verbal assessment",
+            "image_quality": "unknown",
+            "limitations": f"Analysis failed: {str(e)}",
+            "source": "Error fallback"
+        }

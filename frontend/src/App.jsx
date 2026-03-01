@@ -218,6 +218,30 @@ const Icon = {
     </svg>
   ),
 
+  // Camera icon for image upload
+  Camera: ({ size = 24, primary = tokens.accent, secondary = "#06B6D4" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11z" fill={primary} fillOpacity="0.15" stroke={secondary} strokeWidth="1.5"/>
+      <circle cx="12" cy="13" r="4" fill={primary} fillOpacity="0.2" stroke={primary} strokeWidth="1.5"/>
+    </svg>
+  ),
+
+  // Image icon
+  Image: ({ size = 24, primary = tokens.accent, secondary = "#06B6D4" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="3" width="18" height="18" rx="2" fill={primary} fillOpacity="0.15" stroke={secondary} strokeWidth="1.5"/>
+      <circle cx="8.5" cy="8.5" r="1.5" fill={primary}/>
+      <path d="M21 15l-5-5L5 21" stroke={primary} strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  ),
+
+  // Close/X icon
+  Close: ({ size = 20, primary = tokens.textMuted }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M18 6L6 18M6 6l12 12" stroke={primary} strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  ),
+
   // Fever icon
   Fever: ({ size = 28 }) => (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
@@ -374,7 +398,7 @@ function PatientModal({ isOpen, onSubmit, emergencyData, userLocation, locationL
   const [name, setName] = useState("")
   const [age, setAge] = useState("")
   const [gender, setGender] = useState("")
-  const [lang, setLang] = useState("sw")
+  const [lang, setLang] = useState("en")
   const [phone, setPhone] = useState("")
 
   if (!isOpen) return null
@@ -459,10 +483,9 @@ function PatientModal({ isOpen, onSubmit, emergencyData, userLocation, locationL
           <FormField label="Language">
             <div style={{ display: "flex", gap: 8 }}>
               {[
-                { code: "sw", name: "Kiswahili" },
-                { code: "rw", name: "Kinyarwanda" },
                 { code: "en", name: "English" },
                 { code: "fr", name: "Français" },
+                { code: "es", name: "Español" },
               ].map(l => (
                 <button key={l.code} type="button" onClick={() => setLang(l.code)} style={{
                   flex: 1, padding: "10px 0", borderRadius: 10,
@@ -1123,6 +1146,208 @@ function EmergencyCallButton({ emergency, location, isUrgent, compact = false })
 }
 
 // ============================================
+// IMAGE UPLOAD CARD
+// ============================================
+
+function ImageUploadCard({ request, onUpload, onSkip, isUploading }) {
+  const [preview, setPreview] = useState(null)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const fileInputRef = useRef(null)
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setSelectedFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => setPreview(reader.result)
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleUpload = () => {
+    if (preview) {
+      onUpload(preview, request)
+    }
+  }
+
+  const handleCameraCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      // For simplicity, we'll just trigger file input with camera
+      // In a full implementation, you'd create a video preview
+      stream.getTracks().forEach(track => track.stop())
+      fileInputRef.current?.click()
+    } catch (err) {
+      // Fallback to file input
+      fileInputRef.current?.click()
+    }
+  }
+
+  return (
+    <div style={{
+      margin: "12px 0 12px 44px", borderRadius: 16,
+      background: tokens.bgSurface,
+      border: `2px solid ${tokens.accentDimBorder}`,
+      overflow: "hidden",
+      animation: "slideUp 0.4s ease-out",
+      boxShadow: tokens.shadowMd,
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "16px 20px",
+        background: tokens.accentDim,
+        borderBottom: `1px solid ${tokens.accentDimBorder}`,
+        display: "flex", alignItems: "center", gap: 12,
+      }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 12,
+          background: tokens.accent,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Icon.Camera size={22} primary="#FFFFFF" secondary="#FFFFFF" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: tokens.textPrimary }}>
+            Photo Request (Optional)
+          </div>
+          <div style={{ fontSize: 12, color: tokens.textSecondary, marginTop: 2 }}>
+            {request?.reason || "A photo would help with assessment"}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: "20px" }}>
+        {/* Preview */}
+        {preview ? (
+          <div style={{ marginBottom: 16, position: "relative" }}>
+            <img
+              src={preview}
+              alt="Preview"
+              style={{
+                width: "100%", maxHeight: 200, objectFit: "contain",
+                borderRadius: 12, background: tokens.bgRecessed,
+              }}
+            />
+            <button
+              onClick={() => { setPreview(null); setSelectedFile(null) }}
+              style={{
+                position: "absolute", top: 8, right: 8,
+                width: 28, height: 28, borderRadius: "50%",
+                background: "rgba(0,0,0,0.6)", border: "none",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <Icon.Close size={16} primary="#FFFFFF" />
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            padding: "24px", borderRadius: 12,
+            border: `2px dashed ${tokens.border}`,
+            background: tokens.bgRecessed,
+            textAlign: "center", marginBottom: 16,
+          }}>
+            <Icon.Image size={40} primary={tokens.textMuted} secondary={tokens.border} />
+            <div style={{ fontSize: 13, color: tokens.textMuted, marginTop: 12 }}>
+              Take a photo or upload an image of your {request?.body_area || "affected area"}
+            </div>
+          </div>
+        )}
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          style={{ display: "none" }}
+        />
+
+        {/* Buttons */}
+        <div style={{ display: "flex", gap: 10 }}>
+          {!preview ? (
+            <>
+              <button
+                onClick={handleCameraCapture}
+                style={{
+                  flex: 1, padding: "12px 0", borderRadius: 10, border: "none",
+                  background: tokens.accent, color: "#FFFFFF",
+                  fontSize: 14, fontWeight: 600, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                }}
+              >
+                <Icon.Camera size={18} primary="#FFFFFF" secondary="#FFFFFF" />
+                Take Photo
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  flex: 1, padding: "12px 0", borderRadius: 10,
+                  border: `1px solid ${tokens.border}`, background: tokens.bgRecessed,
+                  color: tokens.textSecondary, fontSize: 14, fontWeight: 600, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                }}
+              >
+                <Icon.Image size={18} />
+                Upload
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleUpload}
+              disabled={isUploading}
+              style={{
+                flex: 1, padding: "12px 0", borderRadius: 10, border: "none",
+                background: tokens.accent, color: "#FFFFFF",
+                fontSize: 14, fontWeight: 700, cursor: isUploading ? "wait" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                opacity: isUploading ? 0.7 : 1,
+              }}
+            >
+              {isUploading ? (
+                <>
+                  <Icon.Spinner size={16} primary="#FFFFFF" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Icon.Send size={16} primary="#FFFFFF" secondary="#FFFFFF" />
+                  Send Photo
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Skip button */}
+        <button
+          onClick={onSkip}
+          disabled={isUploading}
+          style={{
+            width: "100%", marginTop: 10, padding: "10px 0",
+            background: "none", border: "none",
+            color: tokens.textMuted, fontSize: 13, cursor: "pointer",
+          }}
+        >
+          Skip — continue without photo
+        </button>
+
+        {/* Privacy note */}
+        <div style={{
+          marginTop: 12, padding: "10px 14px", borderRadius: 8,
+          background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)",
+          fontSize: 11, color: tokens.amber, textAlign: "center",
+        }}>
+          Photos are only used for this assessment and are not stored permanently.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
 // CHAT BUBBLE
 // ============================================
 
@@ -1440,6 +1665,8 @@ function App() {
   const [emergencyData, setEmergencyData] = useState(null)
   const [userLocation, setUserLocation] = useState(null)
   const [locationLoading, setLocationLoading] = useState(false)
+  const [imageRequest, setImageRequest] = useState(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   // Refs
   const messagesEndRef = useRef(null)
@@ -1644,6 +1871,11 @@ function App() {
                   setTriageData(data.data)
                   break
 
+                case 'image_request':
+                  console.log('📷 Image requested:', data.data)
+                  setImageRequest(data.data)
+                  break
+
                 case 'handoff':
                   console.log('📋 Handoff data received:', data.data)
                   setHandoffData(prev => ({ ...prev, ...data.data }))
@@ -1817,6 +2049,80 @@ Generated by Daktari AI Triage Assistant
     alert('Summary copied to clipboard!')
   }
 
+  // Handle image upload
+  const handleImageUpload = async (imageData, request) => {
+    setIsUploadingImage(true)
+    setImageRequest(null) // Hide the upload card
+
+    try {
+      // Send image for analysis
+      const res = await fetch('/api/analyze-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: imageData,
+          body_area: request?.body_area || 'unspecified',
+          condition_type: request?.condition_type || 'other',
+          context: request?.reason || ''
+        })
+      })
+
+      const analysis = await res.json()
+      console.log('📷 Image analysis result:', analysis)
+
+      // Add image message to chat
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        role: 'user',
+        content: `[Photo of ${request?.body_area || 'affected area'} uploaded]`,
+        isImage: true,
+        imagePreview: imageData
+      }])
+
+      // Add analysis result as assistant message
+      if (analysis && !analysis.error) {
+        const analysisText = `**Visual Assessment:**\n${analysis.observations || 'Analysis complete.'}\n\n${
+          analysis.concerning_features?.length
+            ? `**Note:** ${analysis.concerning_features.join(', ')}`
+            : ''
+        }`
+
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: analysisText,
+          isAnalysis: true
+        }])
+
+        // If analysis affects urgency, update triage
+        if (analysis.urgency_impact === 'significantly_increases') {
+          setToolCalls(prev => [...new Set([...prev, 'image_analysis'])])
+        }
+      }
+
+      // Continue the conversation with the analysis context
+      sendMessage(`I've shared a photo. The visual assessment shows: ${analysis.observations || 'Image received'}`)
+
+    } catch (err) {
+      console.error('Image upload failed:', err)
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        role: 'assistant',
+        content: 'Sorry, I had trouble analyzing the image. Let\'s continue with your description.',
+        error: true
+      }])
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  // Handle skipping image upload
+  const handleImageSkip = () => {
+    setImageRequest(null)
+    // Send a message indicating user skipped
+    sendMessage("I'd prefer not to share a photo. Let me describe it instead.")
+  }
+
   // Handlers
   const handlePatientSubmit = (data) => {
     // Include location and emergency data with patient
@@ -1835,6 +2141,7 @@ Generated by Daktari AI Triage Assistant
     setToolCalls([])
     setShowPatientModal(true)
     setPatient(null)
+    setImageRequest(null)
   }
 
   const showWelcome = messages.length === 0 && !streamingResponse && !isTranscribing
@@ -1963,6 +2270,16 @@ Generated by Daktari AI Triage Assistant
             {isTranscribing && <TranscribingIndicator />}
             {isStreaming && streamingResponse && <StreamingMessage content={streamingResponse} />}
             {isLoading && !isStreaming && !streamingResponse && <ThinkingIndicator />}
+
+            {/* Image upload request */}
+            {imageRequest && (
+              <ImageUploadCard
+                request={imageRequest}
+                onUpload={handleImageUpload}
+                onSkip={handleImageSkip}
+                isUploading={isUploadingImage}
+              />
+            )}
 
             {/* Tool call visualizations */}
             {toolCalls.includes('icd10') && (

@@ -18,7 +18,7 @@ from datetime import datetime
 from config import MISTRAL_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
 from icd10 import lookup_icd10, check_red_flags
 from handoff import generate_handoff_pdf
-from clinical_tools import suggest_differentials, assess_urgency, generate_recommendations, build_symptom_timeline
+from clinical_tools import suggest_differentials, assess_urgency, generate_recommendations, build_symptom_timeline, analyze_medical_image
 
 # ============================================
 # LOGGING CONFIGURATION
@@ -94,10 +94,33 @@ client = Mistral(api_key=MISTRAL_API_KEY)
 logger.info(f"✓ Mistral client initialized (API key: {MISTRAL_API_KEY[:8]}...)")
 logger.info(f"✓ ElevenLabs configured: {'Yes' if ELEVENLABS_API_KEY and ELEVENLABS_API_KEY != 'your-elevenlabs-api-key-here' else 'No'}")
 
-# System prompt for medical triage
-TRIAGE_SYSTEM_PROMPT = """You are Daktari, a warm and professional medical intake assistant for community health workers.
+# Language-specific greetings and instructions
+# Only languages natively supported by Mistral
+LANGUAGE_CONFIG = {
+    "en": {
+        "name": "English",
+        "greeting": "Hello! I'm Daktari. What brings you in today?",
+        "instruction": "Respond in English. Be warm, patient, and reassuring."
+    },
+    "fr": {
+        "name": "French",
+        "greeting": "Bonjour! Je suis Daktari. Comment puis-je vous aider aujourd'hui?",
+        "instruction": "Respond in French (Français). Be warm, patient, and reassuring. Use formal 'vous' form."
+    },
+    "es": {
+        "name": "Spanish",
+        "greeting": "¡Hola! Soy Daktari. ¿Qué le trae hoy?",
+        "instruction": "Respond in Spanish (Español). Be warm, patient, and reassuring. Use formal 'usted' form."
+    },
+}
 
-LANGUAGE: Respond in English. Be warm, patient, and reassuring.
+def get_system_prompt(patient_lang: str = "en") -> str:
+    """Generate system prompt based on patient's language."""
+    lang_config = LANGUAGE_CONFIG.get(patient_lang, LANGUAGE_CONFIG["en"])
+
+    return f"""You are Daktari, a warm and professional medical intake assistant for community health workers.
+
+LANGUAGE: {lang_config['instruction']}
 
 ## INTAKE PROTOCOL (follow this order):
 
@@ -138,6 +161,25 @@ LANGUAGE: Respond in English. Be warm, patient, and reassuring.
 - Include ICD-10 codes: "headache (ICD-10: R51)"
 - Mention data source when relevant
 
+## IMAGE REQUESTS (IMPORTANT):
+For visible conditions, you MUST call the `request_image` tool — do NOT just mention photos in text.
+
+When to call `request_image`:
+- Burns, wounds, cuts, bruises
+- Skin rashes, lesions, bites, infections
+- Eye redness, swelling, discharge
+- Swelling anywhere on the body
+- Any condition the patient describes as "looking bad"
+
+HOW TO REQUEST:
+1. CALL the `request_image` tool with reason, body_area, and condition_type
+2. The system will show an upload UI to the patient
+3. Wait for their response (they can upload or skip)
+4. Continue assessment based on their choice
+
+DO NOT just say "would you like to share a photo" in text — USE THE TOOL.
+The tool triggers the actual camera/upload interface for the patient.
+
 ## RULES:
 - NEVER diagnose - only document and triage
 - NEVER prescribe medications
@@ -146,6 +188,9 @@ LANGUAGE: Respond in English. Be warm, patient, and reassuring.
 - Always complete the full assessment before generating handoff
 - Include disclaimer: "AI-assisted triage — clinical judgment required"
 """
+
+# Default system prompt for backwards compatibility
+TRIAGE_SYSTEM_PROMPT = get_system_prompt("en")
 
 # Tool definitions for Mistral function calling
 TOOLS = [
@@ -284,12 +329,39 @@ TOOLS = [
                 "required": ["chief_complaint", "symptoms"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "request_image",
+            "description": "CALL THIS TOOL to show the patient a camera/upload interface for sharing a photo. Use for ANY visible condition: burns, wounds, rashes, swelling, eye issues, skin problems. The patient can choose to upload or skip. Do NOT just mention photos in text — call this tool to trigger the actual upload UI.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "description": "Brief explanation shown to patient (e.g., 'A photo would help me assess the severity of your burn')"
+                    },
+                    "body_area": {
+                        "type": "string",
+                        "description": "Which body part to photograph (e.g., 'leg', 'arm', 'throat', 'eye', 'back')"
+                    },
+                    "condition_type": {
+                        "type": "string",
+                        "enum": ["skin", "eye", "throat", "wound", "burn", "swelling", "rash", "other"],
+                        "description": "Type of visible condition"
+                    }
+                },
+                "required": ["reason", "body_area", "condition_type"]
+            }
+        }
     }
 ]
 
 
 class ChatRequest(BaseModel):
     messages: list[dict]
+    patient: Optional[dict] = None  # Patient demographics including lang
 
 
 class ChatResponse(BaseModel):
@@ -322,6 +394,13 @@ class TTSRequest(BaseModel):
     language: str = "en"
 
 
+class ImageAnalysisRequest(BaseModel):
+    image: str  # Base64-encoded image
+    body_area: str = "unspecified"
+    condition_type: str = "other"
+    context: str = ""
+
+
 @app.get("/")
 async def root():
     return {"message": "Daktari API is running", "version": "1.0.0"}
@@ -330,6 +409,40 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+
+@app.post("/analyze-image")
+async def analyze_image(request: ImageAnalysisRequest):
+    """Analyze a medical image using Pixtral for visual assessment."""
+    logger.info("=" * 50)
+    logger.info("🖼️ POST /analyze-image - Image analysis request")
+    logger.info(f"   Body area: {request.body_area}")
+    logger.info(f"   Condition type: {request.condition_type}")
+    logger.info(f"   Image size: {len(request.image)} chars")
+
+    try:
+        # Remove data URL prefix if present
+        image_data = request.image
+        if "base64," in image_data:
+            image_data = image_data.split("base64,")[1]
+
+        result = await analyze_medical_image(
+            image_base64=image_data,
+            body_area=request.body_area,
+            condition_type=request.condition_type,
+            context=request.context
+        )
+
+        logger.info(f"   ✅ Analysis complete: {result.get('urgency_impact', 'none')} urgency impact")
+        return result
+
+    except Exception as e:
+        logger.error(f"   ❌ Image analysis failed: {str(e)}")
+        return {
+            "error": str(e),
+            "observations": "Unable to analyze image",
+            "urgency_impact": "none"
+        }
 
 
 async def execute_tool_call(tool_name: str, arguments: dict) -> dict:
@@ -369,6 +482,15 @@ async def execute_tool_call(tool_name: str, arguments: dict) -> dict:
         elif tool_name == "generate_handoff":
             logger.info(f"   📋 Generating handoff document")
             result = {"status": "handoff_ready", "data": arguments}
+        elif tool_name == "request_image":
+            logger.info(f"   📷 Image requested: {arguments.get('body_area', 'unspecified')} - {arguments.get('reason', 'no reason')}")
+            result = {
+                "status": "image_requested",
+                "reason": arguments.get("reason", "To better assess your condition"),
+                "body_area": arguments.get("body_area", "affected area"),
+                "condition_type": arguments.get("condition_type", "other"),
+                "message": f"A photo of your {arguments.get('body_area', 'affected area')} would help me better assess your condition. This is optional - you can skip if you prefer."
+            }
         else:
             logger.warning(f"   ⚠️ Unknown tool: {tool_name}")
             result = {"error": f"Unknown tool: {tool_name}"}
@@ -395,7 +517,12 @@ async def chat(request: ChatRequest):
         logger.info(f"   Last message ({last_msg.get('role', 'unknown')}): {last_msg.get('content', '')[:100]}...")
 
     try:
-        messages = [{"role": "system", "content": TRIAGE_SYSTEM_PROMPT}] + request.messages
+        # Get patient language for localized responses
+        patient_lang = request.patient.get("lang", "en") if request.patient else "en"
+        system_prompt = get_system_prompt(patient_lang)
+        logger.info(f"   🌐 Patient language: {patient_lang}")
+
+        messages = [{"role": "system", "content": system_prompt}] + request.messages
 
         logger.info("   🤖 Calling Mistral Large...")
         start_time = time.time()
@@ -611,6 +738,7 @@ async def create_handoff(request: HandoffRequest):
 class StreamingChatRequest(BaseModel):
     messages: list[dict]
     voice_response: bool = False  # If true, also stream TTS
+    patient: Optional[dict] = None  # Patient demographics including lang
 
 
 @app.post("/chat/stream")
@@ -622,7 +750,12 @@ async def chat_stream(request: StreamingChatRequest):
 
     async def generate() -> AsyncGenerator[str, None]:
         try:
-            messages = [{"role": "system", "content": TRIAGE_SYSTEM_PROMPT}] + request.messages
+            # Get patient language for localized responses
+            patient_lang = request.patient.get("lang", "en") if request.patient else "en"
+            system_prompt = get_system_prompt(patient_lang)
+            logger.info(f"   🌐 Patient language: {patient_lang}")
+
+            messages = [{"role": "system", "content": system_prompt}] + request.messages
 
             # First, get response with tool support (non-streaming for tool handling)
             logger.info("   🤖 Calling Mistral Large with tools...")
@@ -692,6 +825,10 @@ async def chat_stream(request: StreamingChatRequest):
                                     "code": result.get("icd10_code"),
                                     "description": result.get("description")
                                 })
+
+                        if tool_name == "request_image" and "error" not in result:
+                            # Emit special event for frontend to show image upload UI
+                            yield f"data: {json.dumps({'type': 'image_request', 'data': result})}\n\n"
 
                     except Exception as tool_error:
                         logger.error(f"   ❌ {tool_name} failed: {str(tool_error)}")
