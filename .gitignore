@@ -30,3 +30,7 @@ dist/
 # Logs
 *.log
 npm-debug.log*
+
+*CLAUDE*
+ROADMAP.md
+*test_icd10.py*

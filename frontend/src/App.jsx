@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { detectEmergencyNumbers, getEmergencyNumbers, DEFAULT_EMERGENCY } from './emergencyNumbers'
 
 // ============================================
 // DESIGN TOKENS
@@ -202,6 +203,21 @@ const Icon = {
     </svg>
   ),
 
+  // Phone icon for emergency calls
+  Phone: ({ size = 24, primary = tokens.red, secondary = "#FCA5A5" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" fill={primary} fillOpacity="0.2" stroke={secondary} strokeWidth="1.5"/>
+    </svg>
+  ),
+
+  // Location pin icon
+  Location: ({ size = 20, primary = tokens.accent, secondary = "#06B6D4" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill={primary} fillOpacity="0.2" stroke={secondary} strokeWidth="1.5"/>
+      <circle cx="12" cy="9" r="2.5" fill={primary} stroke={secondary} strokeWidth="1"/>
+    </svg>
+  ),
+
   // Fever icon
   Fever: ({ size = 28 }) => (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
@@ -354,7 +370,7 @@ const inputStyle = {
 // PATIENT MODAL
 // ============================================
 
-function PatientModal({ isOpen, onSubmit }) {
+function PatientModal({ isOpen, onSubmit, emergencyData, userLocation, locationLoading }) {
   const [name, setName] = useState("")
   const [age, setAge] = useState("")
   const [gender, setGender] = useState("")
@@ -470,6 +486,54 @@ function PatientModal({ isOpen, onSubmit }) {
             />
           </FormField>
 
+          {/* Emergency info section */}
+          <div style={{
+            padding: "14px 16px", borderRadius: 12,
+            background: "rgba(220,38,38,0.06)",
+            border: "1px solid rgba(220,38,38,0.15)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <Icon.Phone size={18} primary={tokens.red} secondary="#FCA5A5" />
+              <span style={{ fontSize: 13, fontWeight: 600, color: tokens.red }}>
+                Emergency Services
+              </span>
+              {locationLoading && (
+                <span style={{ marginLeft: "auto" }}>
+                  <Icon.Spinner size={14} primary={tokens.textMuted} />
+                </span>
+              )}
+            </div>
+            {emergencyData ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: 12, color: tokens.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Icon.Location size={12} primary={tokens.textMuted} secondary={tokens.textMuted} />
+                    {userLocation?.city ? `${userLocation.city}, ` : ''}{emergencyData.country}
+                  </div>
+                  <div style={{ fontSize: 11, color: tokens.textMuted, marginTop: 2 }}>
+                    Ambulance: {emergencyData.ambulance} | Police: {emergencyData.police}
+                  </div>
+                </div>
+                <a
+                  href={`tel:${emergencyData.ambulance}`}
+                  style={{
+                    padding: "8px 14px", borderRadius: 8,
+                    background: tokens.red, color: "#FFFFFF",
+                    fontSize: 13, fontWeight: 700, textDecoration: "none",
+                    display: "flex", alignItems: "center", gap: 6,
+                  }}
+                >
+                  <Icon.Phone size={14} primary="#FFFFFF" secondary="#FCA5A5" />
+                  {emergencyData.display}
+                </a>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: tokens.textMuted }}>
+                {locationLoading ? "Detecting your location..." : "Emergency: 112 (International)"}
+              </div>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={!canSubmit}
@@ -496,7 +560,7 @@ function PatientModal({ isOpen, onSubmit }) {
 // WELCOME SCREEN
 // ============================================
 
-function WelcomeScreen({ patient, onStartRecording, onSendMessage }) {
+function WelcomeScreen({ patient, onStartRecording, onSendMessage, emergencyData, userLocation }) {
   const quickStarts = [
     { icon: "fever", title: "Headache & Fever", desc: "Common symptoms needing assessment", prompt: "I have a headache and fever" },
     { icon: "cough", title: "Persistent Cough", desc: "Coughing for 3+ days", prompt: "I've been coughing for several days" },
@@ -601,6 +665,32 @@ function WelcomeScreen({ patient, onStartRecording, onSendMessage }) {
           </button>
         ))}
       </div>
+
+      {/* Emergency info footer */}
+      {emergencyData && (
+        <a
+          href={`tel:${emergencyData.ambulance || emergencyData.display}`}
+          style={{
+            marginTop: 8, padding: "10px 20px", borderRadius: 12,
+            background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.12)",
+            display: "flex", alignItems: "center", gap: 10,
+            textDecoration: "none", color: tokens.textSecondary,
+            maxWidth: 480, width: "100%",
+          }}
+        >
+          <Icon.Phone size={18} primary={tokens.red} secondary="#FCA5A5" />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: tokens.red }}>
+              Emergency: {emergencyData.display}
+            </div>
+            <div style={{ fontSize: 11, color: tokens.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
+              <Icon.Location size={10} primary={tokens.textMuted} secondary={tokens.textMuted} />
+              {userLocation?.city ? `${userLocation.city}, ` : ''}{emergencyData.country}
+            </div>
+          </div>
+          <span style={{ fontSize: 11, color: tokens.textMuted }}>Tap to call</span>
+        </a>
+      )}
     </div>
   )
 }
@@ -866,6 +956,168 @@ function HandoffCard({ handoffData, triageData, patient, onDownload, onCopy }) {
         <Icon.Medical size={14} primary={tokens.textMuted} secondary={tokens.textMuted} />
         AI-assisted triage — clinical judgment required
       </div>
+    </div>
+  )
+}
+
+// ============================================
+// EMERGENCY CALL BUTTON
+// ============================================
+
+function EmergencyCallButton({ emergency, location, isUrgent, compact = false }) {
+  const [expanded, setExpanded] = useState(false)
+
+  if (!emergency) return null
+
+  const handleCall = (number) => {
+    // Clean the number for tel: link
+    const cleanNumber = number.replace(/\s+/g, '').replace(/[()-]/g, '')
+    window.location.href = `tel:${cleanNumber}`
+  }
+
+  if (compact) {
+    return (
+      <button
+        onClick={() => handleCall(emergency.display)}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "6px 12px", borderRadius: 8,
+          background: isUrgent ? tokens.red : "transparent",
+          border: isUrgent ? "none" : `1px solid ${tokens.border}`,
+          color: isUrgent ? "#FFFFFF" : tokens.textSecondary,
+          fontSize: 12, fontWeight: 600, cursor: "pointer",
+          animation: isUrgent ? "breathe 2s ease-in-out infinite" : "none",
+        }}
+        title={`Call ${emergency.country} Emergency: ${emergency.display}`}
+      >
+        <Icon.Phone size={14} primary={isUrgent ? "#FFFFFF" : tokens.red} secondary={isUrgent ? "#FCA5A5" : "#FCA5A5"} />
+        {emergency.display}
+      </button>
+    )
+  }
+
+  return (
+    <div style={{
+      margin: "12px 0", borderRadius: 16,
+      background: isUrgent ? "#FEF2F2" : tokens.bgSurface,
+      border: `2px solid ${isUrgent ? tokens.red : tokens.border}`,
+      overflow: "hidden",
+      animation: isUrgent ? "slideUp 0.4s ease-out" : "none",
+      boxShadow: isUrgent ? "0 4px 20px rgba(220,38,38,0.15)" : tokens.shadow,
+    }}>
+      {/* Header */}
+      <div
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          padding: "14px 18px",
+          display: "flex", alignItems: "center", gap: 12,
+          cursor: "pointer",
+          background: isUrgent ? "rgba(220,38,38,0.08)" : "transparent",
+        }}
+      >
+        <div style={{
+          width: 40, height: 40, borderRadius: 12,
+          background: isUrgent ? tokens.red : "rgba(220,38,38,0.1)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          animation: isUrgent ? "breathe 2s ease-in-out infinite" : "none",
+        }}>
+          <Icon.Phone size={22} primary={isUrgent ? "#FFFFFF" : tokens.red} secondary={isUrgent ? "#FCA5A5" : "#FCA5A5"} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: isUrgent ? tokens.red : tokens.textPrimary }}>
+            Emergency Services
+          </div>
+          <div style={{ fontSize: 12, color: tokens.textMuted, display: "flex", alignItems: "center", gap: 4 }}>
+            <Icon.Location size={12} primary={tokens.textMuted} secondary={tokens.textMuted} />
+            {location?.city ? `${location.city}, ` : ''}{emergency.country}
+          </div>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleCall(emergency.ambulance || emergency.display)
+          }}
+          style={{
+            padding: "10px 20px", borderRadius: 10, border: "none",
+            background: tokens.red,
+            color: "#FFFFFF", fontSize: 14, fontWeight: 700, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 6,
+            boxShadow: "0 2px 8px rgba(220,38,38,0.3)",
+          }}
+        >
+          <Icon.Phone size={16} primary="#FFFFFF" secondary="#FCA5A5" />
+          Call {emergency.ambulance || emergency.display}
+        </button>
+      </div>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div style={{
+          padding: "0 18px 16px",
+          borderTop: `1px solid ${tokens.border}`,
+          marginTop: 0,
+          paddingTop: 14,
+        }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 12 }}>
+            {[
+              { label: "Ambulance", number: emergency.ambulance, icon: "ambulance" },
+              { label: "Police", number: emergency.police, icon: "police" },
+              { label: "Fire", number: emergency.fire, icon: "fire" },
+            ].map((service) => (
+              <button
+                key={service.label}
+                onClick={() => handleCall(service.number)}
+                style={{
+                  padding: "10px 8px", borderRadius: 10,
+                  border: `1px solid ${tokens.border}`,
+                  background: tokens.bgRecessed,
+                  cursor: "pointer",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                }}
+              >
+                <span style={{ fontSize: 11, color: tokens.textMuted, textTransform: "uppercase", fontWeight: 600 }}>
+                  {service.label}
+                </span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: tokens.textPrimary }}>
+                  {service.number}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Specialized numbers */}
+          {emergency.specialized && emergency.specialized.length > 0 && (
+            <>
+              <div style={{ fontSize: 11, color: tokens.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 8 }}>
+                Specialized Services
+              </div>
+              {emergency.specialized.map((service, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleCall(service.number)}
+                  style={{
+                    width: "100%", padding: "10px 14px", marginBottom: 6,
+                    borderRadius: 8, border: `1px solid ${tokens.border}`,
+                    background: tokens.bgSurface, cursor: "pointer",
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontSize: 13, color: tokens.textSecondary }}>{service.name}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: tokens.accent }}>{service.number}</span>
+                </button>
+              ))}
+            </>
+          )}
+
+          <div style={{
+            marginTop: 12, padding: "8px 12px", borderRadius: 8,
+            background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)",
+            fontSize: 11, color: tokens.amber, textAlign: "center",
+          }}>
+            In life-threatening emergencies, call immediately. Daktari is not a substitute for emergency services.
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1185,6 +1437,9 @@ function App() {
   const [triageData, setTriageData] = useState(null)
   const [analyser, setAnalyser] = useState(null)
   const [toolCalls, setToolCalls] = useState([])
+  const [emergencyData, setEmergencyData] = useState(null)
+  const [userLocation, setUserLocation] = useState(null)
+  const [locationLoading, setLocationLoading] = useState(false)
 
   // Refs
   const messagesEndRef = useRef(null)
@@ -1279,6 +1534,30 @@ function App() {
     initWebSocket()
     return () => wsRef.current?.close()
   }, [initWebSocket])
+
+  // Detect location and emergency numbers on mount
+  useEffect(() => {
+    const detectLocation = async () => {
+      setLocationLoading(true)
+      try {
+        const result = await detectEmergencyNumbers()
+        if (result.success) {
+          setEmergencyData(result.emergency)
+          setUserLocation(result.location)
+        } else {
+          // Use default international emergency number
+          setEmergencyData(DEFAULT_EMERGENCY)
+        }
+      } catch (error) {
+        console.error('Location detection failed:', error)
+        setEmergencyData(DEFAULT_EMERGENCY)
+      } finally {
+        setLocationLoading(false)
+      }
+    }
+
+    detectLocation()
+  }, [])
 
   // Audio playback
   const playAudioFromBase64 = (base64Data) => {
@@ -1408,6 +1687,13 @@ function App() {
   // Start recording
   const startRecording = async () => {
     try {
+      // Stop any currently playing audio before recording
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause()
+        audioPlayerRef.current.currentTime = 0
+        setPlayingId(null)
+      }
+
       if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
         initWebSocket()
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -1533,7 +1819,12 @@ Generated by Daktari AI Triage Assistant
 
   // Handlers
   const handlePatientSubmit = (data) => {
-    setPatient(data)
+    // Include location and emergency data with patient
+    setPatient({
+      ...data,
+      location: userLocation,
+      emergencyNumber: emergencyData?.display || "112"
+    })
     setShowPatientModal(false)
   }
 
@@ -1559,7 +1850,13 @@ Generated by Daktari AI Triage Assistant
       <GlobalStyles />
 
       {/* Patient Modal */}
-      <PatientModal isOpen={showPatientModal} onSubmit={handlePatientSubmit} />
+      <PatientModal
+        isOpen={showPatientModal}
+        onSubmit={handlePatientSubmit}
+        emergencyData={emergencyData}
+        userLocation={userLocation}
+        locationLoading={locationLoading}
+      />
 
       {/* Header */}
       {!showPatientModal && (
@@ -1585,6 +1882,15 @@ Generated by Daktari AI Triage Assistant
               </div>
             )}
           </div>
+          {/* Emergency button in header */}
+          {emergencyData && (
+            <EmergencyCallButton
+              emergency={emergencyData}
+              location={userLocation}
+              isUrgent={triageData?.color === 'red' || triageData?.color === 'orange'}
+              compact={true}
+            />
+          )}
           {handoffData && (
             <button
               onClick={downloadHandoff}
@@ -1621,6 +1927,17 @@ Generated by Daktari AI Triage Assistant
       {/* Triage Banner */}
       {triageData && <TriageBanner triageData={triageData} />}
 
+      {/* Prominent Emergency Call for RED/ORANGE triage */}
+      {triageData && (triageData.color === 'red' || triageData.color === 'orange') && emergencyData && (
+        <div style={{ padding: "0 20px", marginTop: 8 }}>
+          <EmergencyCallButton
+            emergency={emergencyData}
+            location={userLocation}
+            isUrgent={true}
+          />
+        </div>
+      )}
+
       {/* Main Content */}
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
         {showWelcome && !showPatientModal ? (
@@ -1628,6 +1945,8 @@ Generated by Daktari AI Triage Assistant
             patient={patient}
             onStartRecording={startRecording}
             onSendMessage={sendMessage}
+            emergencyData={emergencyData}
+            userLocation={userLocation}
           />
         ) : (
           <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 8 }}>

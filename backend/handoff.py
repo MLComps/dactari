@@ -283,6 +283,16 @@ def generate_handoff_pdf(data: dict) -> str:
         p_sex = p_sex.capitalize()
     p_lang = patient.get('lang', patient.get('language', 'Not specified'))
     p_contact = patient.get('contact', patient.get('phone', '—')) or '—'
+    p_emergency = patient.get('emergencyNumber', '112')
+    p_location = patient.get('location', {})
+    p_location_str = ''
+    if p_location:
+        city = p_location.get('city', '')
+        country = p_location.get('country', '')
+        if city and country:
+            p_location_str = f"{city}, {country}"
+        elif country:
+            p_location_str = country
 
     # Map language codes to names
     lang_map = {'sw': 'Kiswahili', 'rw': 'Kinyarwanda', 'en': 'English', 'fr': 'Français'}
@@ -295,7 +305,7 @@ def generate_handoff_pdf(data: dict) -> str:
             Paragraph(f'{p_age} years', styles["body"]),
             Paragraph(f'{p_sex}', styles["body"]),
             Paragraph(f'Language: {p_lang}', styles["body_sec"]),
-            Paragraph(f'{p_contact}', styles["body_sec"]),
+            Paragraph(f'<font color="#DC2626"><b>Emergency: {p_emergency}</b></font>', styles["body_sec"]) if p_emergency else Paragraph(f'{p_contact}', styles["body_sec"]),
         ]
     ]
     patient_table = Table(patient_cells, colWidths=[W*0.25, W*0.15, W*0.15, W*0.22, W*0.23])

@@ -1,42 +1,26 @@
-"""ICD-10 lookup and red flag detection."""
+"""ICD-10 lookup and red flag detection.
+
+API Strategy:
+1. Local cache with 139 common symptoms (fastest)
+2. NLM Clinical Tables API (free, no auth required)
+3. Fallback to R69 (unspecified illness)
+
+Note: WHO ICD API does not provide ICD-10 search functionality.
+See: https://icd.who.int/docs/icd-api/APIDoc-Version2/
+"ICD10 endpoints serves ICD-10 releases... the search is not provided"
+"""
 import httpx
 from typing import Optional
-from config import WHO_CLIENT_ID, WHO_CLIENT_SECRET
-
-# Cache for WHO API token
-_who_token_cache: Optional[str] = None
-
-
-async def get_who_token() -> str:
-    """Get access token for WHO ICD API."""
-    global _who_token_cache
-
-    if _who_token_cache:
-        return _who_token_cache
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://icdaccessmanagement.who.int/connect/token",
-            data={
-                "grant_type": "client_credentials",
-                "client_id": WHO_CLIENT_ID,
-                "client_secret": WHO_CLIENT_SECRET,
-                "scope": "icdapi_access"
-            }
-        )
-
-        if response.status_code == 200:
-            _who_token_cache = response.json()["access_token"]
-            return _who_token_cache
-        else:
-            # Fallback to NLM API if WHO auth fails
-            return None
 
 
 async def lookup_icd10(symptom: str) -> dict:
     """Look up ICD-10 code for a symptom or condition.
 
-    Priority: Local cache → WHO ICD API → NLM Clinical Tables → Fallback
+    Priority: Local cache (139 symptoms) → NLM Clinical Tables API → Fallback
+
+    Note: WHO ICD API does not provide ICD-10 search functionality (only ICD-11).
+    See: https://icd.who.int/docs/icd-api/APIDoc-Version2/
+    "ICD10 endpoints... the search is not provided"
     """
     # Try local cache first for common symptoms (fastest)
     local_result = quick_icd10_lookup(symptom)
@@ -45,41 +29,7 @@ async def lookup_icd10(symptom: str) -> dict:
         local_result["source_url"] = "Local cache based on WHO ICD-10 standards"
         return local_result
 
-    # Try WHO ICD API
-    try:
-        token = await get_who_token()
-        if token:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    "https://id.who.int/icd/release/10/2019/search",
-                    params={"q": symptom, "flatResults": "true"},
-                    headers={
-                        "Authorization": f"Bearer {token}",
-                        "Accept": "application/json",
-                        "Accept-Language": "en",
-                        "API-Version": "v2"
-                    }
-                )
-
-                if resp.status_code == 200:
-                    results = resp.json()
-                    codes = []
-                    for entity in results.get("destinationEntities", [])[:3]:
-                        codes.append({
-                            "code": entity.get("theCode", "Unknown"),
-                            "title": entity.get("title", symptom)
-                        })
-
-                    if codes:
-                        return {
-                            "codes": codes,
-                            "source": "WHO ICD-10 International Classification",
-                            "source_url": "https://icd.who.int/browse10/2019/en"
-                        }
-    except Exception:
-        pass
-
-    # Fallback: NLM Clinical Tables API (no auth required)
+    # Primary external source: NLM Clinical Tables API (free, no auth required)
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -155,7 +105,6 @@ def check_red_flags(symptoms: list[str]) -> dict:
     """
     flags = []
     symptom_lower = [s.lower().strip() for s in symptoms]
-    symptom_set = set(symptom_lower)
 
     # Check single red flags
     for symptom in symptom_lower:
