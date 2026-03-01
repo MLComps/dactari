@@ -399,18 +399,18 @@ Analyze this image and provide:
 5. **Image Quality Note**: Comment on any limitations
 
 Return your response as JSON:
-{
+{{
   "observations": "Objective description of what is visible",
   "clinical_descriptors": ["descriptor1", "descriptor2"],
   "possible_conditions": [
-    {"condition": "Condition name", "icd10_hint": "Code", "likelihood": "HIGH/MEDIUM/LOW"}
+    {{"condition": "Condition name", "icd10_hint": "Code", "likelihood": "HIGH/MEDIUM/LOW"}}
   ],
   "concerning_features": ["feature1", "feature2"],
   "urgency_impact": "none|increases|significantly_increases",
   "recommended_action": "What should happen next",
   "image_quality": "good|adequate|poor",
   "limitations": "Any limitations in assessment"
-}
+}}
 
 Body area being examined: {body_area}
 Condition type reported: {condition_type}
@@ -454,12 +454,19 @@ async def analyze_medical_image(
         # Determine image type from base64 header or default to jpeg
         if image_base64.startswith("/9j/"):
             mime_type = "image/jpeg"
+            logger.info("   Detected JPEG image")
         elif image_base64.startswith("iVBOR"):
             mime_type = "image/png"
+            logger.info("   Detected PNG image")
         elif image_base64.startswith("R0lGOD"):
             mime_type = "image/gif"
+            logger.info("   Detected GIF image")
         else:
             mime_type = "image/jpeg"  # Default
+            logger.info(f"   Unknown format, defaulting to JPEG. First chars: {image_base64[:20]}")
+
+        logger.info(f"   Building Pixtral request with {len(image_base64)} chars of base64 data")
+        logger.info(f"   MIME type: {mime_type}")
 
         response = client.chat.complete(
             model="pixtral-large-latest",
@@ -498,17 +505,33 @@ async def analyze_medical_image(
         return result
 
     except Exception as e:
-        logger.error(f"   ❌ Image analysis failed: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"   ❌ Image analysis failed: {error_msg}")
         logger.error(traceback.format_exc())
+
+        # Check for common error types
+        if "401" in error_msg or "unauthorized" in error_msg.lower():
+            user_error = "API authentication failed. Please check your Mistral API key."
+        elif "404" in error_msg or "not found" in error_msg.lower():
+            user_error = "Pixtral model not found. The model may not be available for your API tier."
+        elif "429" in error_msg or "rate limit" in error_msg.lower():
+            user_error = "Rate limit exceeded. Please wait a moment and try again."
+        elif "image" in error_msg.lower() and ("size" in error_msg.lower() or "large" in error_msg.lower()):
+            user_error = "Image too large. Please try a smaller or compressed image."
+        elif "format" in error_msg.lower() or "invalid" in error_msg.lower():
+            user_error = "Invalid image format. Please try a different image."
+        else:
+            user_error = f"Image analysis unavailable: {error_msg[:100]}"
+
         return {
-            "error": str(e),
-            "observations": "Unable to analyze image",
+            "error": error_msg,
+            "observations": user_error,
             "clinical_descriptors": [],
             "possible_conditions": [],
             "concerning_features": [],
             "urgency_impact": "none",
-            "recommended_action": "Continue with verbal assessment",
+            "recommended_action": "Continue with verbal assessment - describe what you see",
             "image_quality": "unknown",
-            "limitations": f"Analysis failed: {str(e)}",
+            "limitations": user_error,
             "source": "Error fallback"
         }
