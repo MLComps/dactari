@@ -970,6 +970,11 @@ async def websocket_voice(websocket: WebSocket):
         while True:
             message = await websocket.receive()
 
+            # Check for disconnect message
+            if message.get("type") == "websocket.disconnect":
+                logger.info(f"🔌 Client disconnected (ID: {ws_id})")
+                break
+
             # Handle binary audio data - just collect, transcribe at the end
             if "bytes" in message:
                 chunk_count += 1
@@ -1253,6 +1258,12 @@ async def websocket_voice(websocket: WebSocket):
 
     except WebSocketDisconnect:
         logger.info(f"🔌 WEBSOCKET DISCONNECTED (ID: {ws_id})")
+    except RuntimeError as e:
+        # Handle "Cannot call receive once disconnect received" gracefully
+        if "disconnect" in str(e).lower():
+            logger.info(f"🔌 WEBSOCKET CLOSED (ID: {ws_id})")
+        else:
+            logger.error(f"❌ WEBSOCKET RUNTIME ERROR (ID: {ws_id}): {str(e)}")
     except Exception as e:
         logger.error(f"❌ WEBSOCKET ERROR (ID: {ws_id}): {str(e)}")
         logger.error(traceback.format_exc())
