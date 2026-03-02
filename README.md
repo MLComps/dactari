@@ -201,6 +201,77 @@ npm run build
 npm run preview
 ```
 
+### Docker (Recommended)
+
+Run the entire application with a single command using Docker Compose.
+
+#### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) installed
+- [Docker Compose](https://docs.docker.com/compose/install/) installed
+
+#### Quick Start
+
+1. **Create environment file** in the project root:
+
+```bash
+cp .env.example .env
+```
+
+2. **Edit `.env`** with your API keys:
+
+```env
+MISTRAL_API_KEY=your-mistral-api-key-here
+ELEVENLABS_API_KEY=your-elevenlabs-api-key-here
+ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
+```
+
+3. **Start the application**:
+
+```bash
+docker-compose up -d
+```
+
+4. **Access the app** at http://localhost:5173
+
+#### Docker Commands
+
+| Command | Description |
+|---------|-------------|
+| `docker-compose up -d` | Start services in background |
+| `docker-compose down` | Stop all services |
+| `docker-compose logs -f` | View live logs |
+| `docker-compose logs backend` | View backend logs only |
+| `docker-compose up -d --build` | Rebuild and restart |
+| `docker-compose ps` | Check service status |
+
+#### Services
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Frontend | http://localhost:5173 | React application |
+| Backend | http://localhost:8000 | FastAPI server |
+| API Docs | http://localhost:8000/docs | Swagger documentation |
+
+#### Troubleshooting Docker
+
+**Container not starting?**
+```bash
+docker-compose logs backend  # Check for errors
+```
+
+**Port already in use?**
+```bash
+docker-compose down
+lsof -i :8000  # Find process using port
+lsof -i :5173
+```
+
+**Rebuild after code changes?**
+```bash
+docker-compose up -d --build
+```
+
 ---
 
 ## Usage
